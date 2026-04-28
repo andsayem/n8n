@@ -6,9 +6,11 @@ import '../../data/models/execution_model.dart';
 
 class N8nApiService extends GetxService {
   late Dio _dio;
+  Dio get dio => _dio;
   String _baseUrl = '';
   String _apiKey = '';
-
+  final bool _isMockMode = false;
+  bool get isMockMode => _isMockMode;
   void configure(String baseUrl, String apiKey) {
     _baseUrl = baseUrl;
     _apiKey = apiKey;
@@ -61,7 +63,9 @@ class N8nApiService extends GetxService {
         list = data;
       }
 
-      return list.map((e) => WorkflowModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => WorkflowModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -104,7 +108,9 @@ class N8nApiService extends GetxService {
         list = data;
       }
 
-      return list.map((e) => ExecutionModel.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => ExecutionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }
@@ -124,7 +130,8 @@ class N8nApiService extends GetxService {
 
   Future<bool> activateWorkflow(String id) async {
     try {
-      await _dio.post('${AppConstants.workflowsEndpoint}/$id${AppConstants.activateEndpoint}');
+      await _dio.post(
+          '${AppConstants.workflowsEndpoint}/$id${AppConstants.activateEndpoint}');
       return true;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -133,14 +140,16 @@ class N8nApiService extends GetxService {
 
   Future<bool> deactivateWorkflow(String id) async {
     try {
-      await _dio.post('${AppConstants.workflowsEndpoint}/$id${AppConstants.deactivateEndpoint}');
+      await _dio.post(
+          '${AppConstants.workflowsEndpoint}/$id${AppConstants.deactivateEndpoint}');
       return true;
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<Map<String, dynamic>> runWorkflow(String id, {Map<String, dynamic>? data}) async {
+  Future<Map<String, dynamic>> runWorkflow(String id,
+      {Map<String, dynamic>? data}) async {
     try {
       final response = await _dio.post(
         '${AppConstants.workflowsEndpoint}/$id${AppConstants.runEndpoint}',
@@ -154,7 +163,8 @@ class N8nApiService extends GetxService {
 
   Future<bool> testConnection() async {
     try {
-      await _dio.get(AppConstants.workflowsEndpoint, queryParameters: {'limit': 1});
+      await _dio
+          .get(AppConstants.workflowsEndpoint, queryParameters: {'limit': 1});
       return true;
     } catch (_) {
       return false;
@@ -181,7 +191,8 @@ class N8nApiService extends GetxService {
         } else if (status == 404) {
           message = 'Resource not found.';
         } else {
-          message = 'Server error ($status): ${e.response?.statusMessage ?? 'Unknown'}';
+          message =
+              'Server error ($status): ${e.response?.statusMessage ?? 'Unknown'}';
         }
         break;
       default:
