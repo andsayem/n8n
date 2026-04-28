@@ -45,7 +45,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  @override
   Widget build(BuildContext context) {
     final controller = Get.find<DashboardController>();
     final auth = Get.find<AuthController>();
