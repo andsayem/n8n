@@ -19,34 +19,36 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-   BannerAd? _bannerAd;
-  @override 
-   void initState() {
-    super.initState(); 
+  BannerAd? _bannerAd;
+  @override
+  void initState() {
+    super.initState();
     _initAdd();
   }
-   Future<void> _initAdd() async {
-     AdmobHelper.loadInterstitialAd();
 
-      // ⚠️ delay banner load (important)
-      Future.delayed(const Duration(seconds: 1), () async {
-        if (!mounted) return;
+  Future<void> _initAdd() async {
+    AdmobHelper.loadInterstitialAd();
 
-        final width = MediaQuery.of(context).size.width.toInt();
-        final ad = await AdmobHelper.loadBannerAd(
-          size: AdSize(width: width - 50, height: 220),
-        );
-        if (!mounted) return;
+    // ⚠️ delay banner load (important)
+    Future.delayed(const Duration(seconds: 1), () async {
+      if (!mounted) return;
 
-        setState(() {
-          _bannerAd = ad;
-        });
+      final width = MediaQuery.of(context).size.width.toInt();
+      final ad = await AdmobHelper.loadBannerAd(
+        size: AdSize(width: width - 50, height: 220),
+      );
+      if (!mounted) return;
+
+      setState(() {
+        _bannerAd = ad;
       });
- 
+    });
   }
+
+  @override
   Widget build(BuildContext context) {
     final controller = Get.find<DashboardController>();
-    final auth = Get.find<AuthController>(); 
+    final auth = Get.find<AuthController>();
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: controller.fetchDashboard,
@@ -78,8 +80,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             Obx(() {
-             
-
               if (controller.hasError.value) {
                 return SliverFillRemaining(
                   child: ErrorRetryWidget(
@@ -94,21 +94,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                  
                     _buildChartSection(context, stats),
                     const SizedBox(height: 8),
                     _bannerAd == null
-                    ? const SizedBox()
-                    : Container(
-                        width: double.infinity,
-                        height: _bannerAd!.size.height.toDouble(),
-                        alignment: Alignment.center,
-                        child: AdWidget(ad: _bannerAd!),
-                      ),
-                const SizedBox(height: 10),
-              
-
-                      _buildStatsGrid(context, stats),
+                        ? const SizedBox()
+                        : Container(
+                            width: double.infinity,
+                            height: _bannerAd!.size.height.toDouble(),
+                            alignment: Alignment.center,
+                            child: AdWidget(ad: _bannerAd!),
+                          ),
+                    const SizedBox(height: 10),
+                    _buildStatsGrid(context, stats),
                     const SizedBox(height: 10),
                     _buildSectionHeader(context, 'Recent Executions'),
                     const SizedBox(height: 12),
@@ -184,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (stats.totalExecutionsToday == 0 && stats.failedExecutions == 0) {
       return const SizedBox.shrink();
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -211,7 +208,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 sections: [
                   PieChartSectionData(
                     color: AppTheme.successColor,
-                    value: stats.totalExecutionsToday > 0 ? stats.totalExecutionsToday.toDouble() : 1,
+                    value: stats.totalExecutionsToday > 0
+                        ? stats.totalExecutionsToday.toDouble()
+                        : 1,
                     title: 'Success\n${stats.totalExecutionsToday}',
                     radius: 50,
                     titleStyle: const TextStyle(
@@ -222,7 +221,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   PieChartSectionData(
                     color: AppTheme.errorColor,
-                    value: stats.failedExecutions > 0 ? stats.failedExecutions.toDouble() : 0.1, // Show a sliver if 0 just for design
+                    value: stats.failedExecutions > 0
+                        ? stats.failedExecutions.toDouble()
+                        : 0.1, // Show a sliver if 0 just for design
                     title: 'Failed\n${stats.failedExecutions}',
                     radius: 50,
                     titleStyle: const TextStyle(
@@ -374,8 +375,8 @@ class _ExecutionTile extends StatelessWidget {
   }
 }
 
-class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
+class DashboardSkeleton extends StatelessWidget {
+  const DashboardSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) {
