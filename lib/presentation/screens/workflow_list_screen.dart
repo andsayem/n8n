@@ -43,13 +43,16 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
       });
  
   }
+  @override
   Widget build(BuildContext context) {
     final controller = Get.find<WorkflowController>();
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
             floating: true,
             snap: true,
             title: const Text('Workflows'),
@@ -106,13 +109,14 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
 
           return Column(
             children: [
-               if (_bannerAd != null)
-                Container(
-                  width: double.infinity,
-                  height: _bannerAd!.size.height.toDouble(),
-                  alignment: Alignment.center,
-                  child: AdWidget(ad: _bannerAd!),
-                ),
+              _bannerAd == null
+                  ? const SizedBox()
+                  : Container(
+                      width: double.infinity,
+                      height: _bannerAd!.size.height.toDouble(),
+                      alignment: Alignment.center,
+                      child: AdWidget(ad: _bannerAd!),
+                    ),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchWorkflows,
@@ -151,6 +155,20 @@ class _SearchBar extends StatelessWidget {
         prefixIcon: const Icon(Icons.search_rounded, size: 20),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         isDense: true,
+        filled: true,
+        fillColor: Theme.of(context).cardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: AppTheme.primaryColor),
+        ),
         suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.clear_rounded, size: 18),
@@ -190,7 +208,7 @@ class _FilterChips extends StatelessWidget {
                     side: BorderSide(
                       color: controller.filterStatus.value == f
                           ? AppTheme.primaryColor
-                          : AppTheme.darkBorder,
+                          : Theme.of(context).dividerColor,
                     ),
                     backgroundColor: Theme.of(context).cardColor,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
