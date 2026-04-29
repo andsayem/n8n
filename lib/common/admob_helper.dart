@@ -1,99 +1,103 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart'; 
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 class AdmobHelper with WidgetsBindingObserver {
   //ca-app-pub-1195883693665145/6786028831
   // ---------------- Ad Unit IDs ----------------
   static const String bannerAdUnitId = "ca-app-pub-1195883693665145/9026463491";
-  static const String interstitialAdUnitId = "ca-app-pub-1195883693665145/5604650274";
-  static const String rewardedAdUnitId = "ca-app-pub-1195883693665145/2203627161";
-  static const String appOpenAdUnitId = "ca-app-pub-1195883693665145/4291568600";
+  static const String interstitialAdUnitId =
+      "ca-app-pub-1195883693665145/5604650274";
+  static const String rewardedAdUnitId =
+      "ca-app-pub-1195883693665145/2203627161";
+  static const String appOpenAdUnitId =
+      "ca-app-pub-1195883693665145/4291568600";
   // ================= Interstitial =================
   static InterstitialAd? _interstitialAd;
   static bool suppressAppOpen = false;
 
-  static bool _isInterstitialLoading = false; 
+  static bool _isInterstitialLoading = false;
 
-/// LOAD
-static void loadInterstitialAd() {
-  if (_isInterstitialLoading || _interstitialAd != null) return;
+  /// LOAD
+  static void loadInterstitialAd() {
+    if (_isInterstitialLoading || _interstitialAd != null) return;
 
-  _isInterstitialLoading = true;
+    _isInterstitialLoading = true;
 
-  InterstitialAd.load(
-    adUnitId: interstitialAdUnitId,
-    request: const AdRequest(),
-    adLoadCallback: InterstitialAdLoadCallback(
-      onAdLoaded: (ad) {
-        _interstitialAd = ad;
-        _isInterstitialLoading = false;
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _isInterstitialLoading = false;
 
-        ad.fullScreenContentCallback = FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) {
-            ad.dispose();
-            _interstitialAd = null;
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _interstitialAd = null;
 
-            // reload immediately (important)
+              // reload immediately (important)
+              loadInterstitialAd();
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _interstitialAd = null;
+
+              loadInterstitialAd();
+            },
+          );
+        },
+        onAdFailedToLoad: (error) {
+          _isInterstitialLoading = false;
+
+          // 🔥 smart retry (exponential delay)
+          Future.delayed(const Duration(seconds: 10), () {
             loadInterstitialAd();
-          },
-          onAdFailedToShowFullScreenContent: (ad, error) {
-            ad.dispose();
-            _interstitialAd = null;
-
-            loadInterstitialAd();
-          },
-        );
-      },
-
-      onAdFailedToLoad: (error) {
-        _isInterstitialLoading = false;
-
-        // 🔥 smart retry (exponential delay)
-        Future.delayed(const Duration(seconds: 10), () {
-          loadInterstitialAd();
-        });
-      },
-    ),
-  );
-}
-static void showInterstitialAd({VoidCallback? onAdDismissed}) {
-  if (_interstitialAd == null) {
-    debugPrint("Ad not ready");
-
-    // 👉 fallback flow continue
-    if (onAdDismissed != null) {
-      onAdDismissed();
-    }
-
-    return;
+          });
+        },
+      ),
+    );
   }
 
-  _interstitialAd!.fullScreenContentCallback =
-      FullScreenContentCallback(
-    onAdDismissedFullScreenContent: (ad) {
-      ad.dispose();
-      _interstitialAd = null;
+  static void showInterstitialAd({VoidCallback? onAdDismissed}) {
+    if (_interstitialAd == null) {
+      debugPrint("Ad not ready");
 
+      // 👉 fallback flow continue
       if (onAdDismissed != null) {
         onAdDismissed();
       }
 
-      loadInterstitialAd();
-    },
-    onAdFailedToShowFullScreenContent: (ad, error) {
-      ad.dispose();
-      _interstitialAd = null;
+      return;
+    }
 
-      if (onAdDismissed != null) {
-        onAdDismissed();
-      }
+    _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _interstitialAd = null;
 
-      loadInterstitialAd();
-    },
-  );
+        if (onAdDismissed != null) {
+          onAdDismissed();
+        }
 
-  _interstitialAd!.show();
-}
+        loadInterstitialAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        _interstitialAd = null;
+
+        if (onAdDismissed != null) {
+          onAdDismissed();
+        }
+
+        loadInterstitialAd();
+      },
+    );
+
+    _interstitialAd!.show();
+  }
+
   // ================= Rewarded =================
   static RewardedAd? _rewardedAd;
 
@@ -141,7 +145,7 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
   //     _rewardedAd = null;
   //   } else {
   //     // 🔥 গুরুত্বপূর্ণ fix (না থাকলে click এ কিছুই হবে না)
-  //     loadRewardedAd(); 
+  //     loadRewardedAd();
   //   }
   // }
 
@@ -199,7 +203,8 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
     return banner;
   }
 
-  static BannerAd getBannerAdInstance({String? adUnitId, AdSize size = const AdSize(width: 320, height: 50)}) {
+  static BannerAd getBannerAdInstance(
+      {String? adUnitId, AdSize size = const AdSize(width: 320, height: 50)}) {
     return BannerAd(
       adUnitId: adUnitId ?? bannerAdUnitId,
       size: size,
@@ -214,7 +219,8 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
     );
   }
 
-  static Widget getBannerAdWidget({String? adUnitId, AdSize size = const AdSize(width: 320, height: 50)}) {
+  static Widget getBannerAdWidget(
+      {String? adUnitId, AdSize size = const AdSize(width: 320, height: 50)}) {
     final key = _bannerAdKey(adUnitId: adUnitId, size: size);
     final bannerAd = _bannerAdCache.putIfAbsent(
       key,
@@ -228,7 +234,8 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
     );
   }
 
-  static Widget bannerAdWidget(BannerAd bannerAd, {double? width, double? height}) {
+  static Widget bannerAdWidget(BannerAd bannerAd,
+      {double? width, double? height}) {
     return SizedBox(
       width: width ?? bannerAd.size.width.toDouble(),
       height: height ?? bannerAd.size.height.toDouble(),
@@ -252,8 +259,7 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
           _appOpenLoadTime = DateTime.now();
           if (onLoaded != null) onLoaded();
         },
-        onAdFailedToLoad: (error) =>
-            debugPrint("AppOpenAd failed: $error"),
+        onAdFailedToLoad: (error) => debugPrint("AppOpenAd failed: $error"),
       ),
     );
   }
@@ -262,16 +268,13 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
     if (suppressAppOpen || _appOpenAd == null || _isShowingAppOpen) return;
 
     if (_appOpenLoadTime != null &&
-        DateTime.now()
-            .subtract(maxCacheDuration)
-            .isAfter(_appOpenLoadTime!)) {
+        DateTime.now().subtract(maxCacheDuration).isAfter(_appOpenLoadTime!)) {
       _appOpenAd!.dispose();
       _appOpenAd = null;
       return;
     }
 
-    _appOpenAd!.fullScreenContentCallback =
-        FullScreenContentCallback(
+    _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) => _isShowingAppOpen = true,
       onAdDismissedFullScreenContent: (ad) {
         _isShowingAppOpen = false;
@@ -301,7 +304,6 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
 
   static Future<Widget> getAdaptiveBannerWidget(double adWidth,
       {String? adUnitId}) async {
-
     if (_adaptiveBannerAd != null && _isAdaptiveLoaded) {
       return SizedBox(
         width: adWidth,
@@ -312,9 +314,8 @@ static void showInterstitialAd({VoidCallback? onAdDismissed}) {
 
     final completer = Completer<Widget>();
 
-    final AdSize size =
-        AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(
-            adWidth.truncate());
+    final AdSize size = AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(
+        adWidth.truncate());
 
     _adaptiveBannerAd = AdManagerBannerAd(
       adUnitId: adUnitId ?? bannerAdUnitId,
