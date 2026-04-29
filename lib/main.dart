@@ -9,6 +9,11 @@ import 'presentation/controllers/theme_controller.dart';
 import 'presentation/routes/app_pages.dart';
 import 'services/instance_service.dart';
 import 'services/n8n_api_service.dart';
+import 'core/services/purchase_service.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:upgrader/upgrader.dart';
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +50,12 @@ final adHelper = AdmobHelper();
         });
       },
     ); 
+
+    
+  // Initialize PurchaseService in the background (non-blocking)
+  final purchaseService = PurchaseService();
+  // start initialization but do not await so UI can appear quickly
+  purchaseService.initialize();
   runApp(const N8nManagerApp());
 }
 
@@ -67,6 +78,7 @@ class N8nManagerApp extends StatelessWidget {
         systemNavigationBarIconBrightness:
             isDark ? Brightness.light : Brightness.dark,
       ));
+      
 
       return GetMaterialApp(
         title: AppConstants.appName,
@@ -78,13 +90,36 @@ class N8nManagerApp extends StatelessWidget {
         getPages: AppPages.routes,
         defaultTransition: Transition.fadeIn,
         builder: (context, child) {
-          return MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: TextScaler.noScaling),
-            child: child!,
+
+              return UpgradeAlert(
+            upgrader: Upgrader(
+              debugLogging: true,
+              // Optional configs:
+              // durationUntilAlertAgain: Duration(days: 1),
+              // showIgnore: false,
+              // showLater: true,
+            ),
+            child: MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.noScaling),
+              child: child!,
+            ),
           );
+
+         
         },
       );
     });
   }
+}
+void configEasyLoading() {
+  EasyLoading.instance
+    ..loadingStyle = EasyLoadingStyle.custom
+    ..backgroundColor = Colors.white
+    ..indicatorColor = Colors.indigo
+    ..textColor = Colors.black
+    ..maskColor = Colors.black.withValues(alpha: 0.5)
+    ..indicatorType = EasyLoadingIndicatorType.fadingCircle
+    ..userInteractions = false
+    ..dismissOnTap = false;
 }
