@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
@@ -18,31 +19,41 @@ class WorkflowListScreen extends StatefulWidget {
 }
 
 class _WorkflowListScreenState extends State<WorkflowListScreen> {
-    BannerAd? _bannerAd;
+  BannerAd? _bannerAd;
   @override
-     void initState() {
-    super.initState(); 
+  void initState() {
+    super.initState();
     _initAdd();
   }
-     Future<void> _initAdd() async {
-     AdmobHelper.loadInterstitialAd();
 
-      // ⚠️ delay banner load (important)
-      Future.delayed(const Duration(seconds: 1), () async {
-        if (!mounted) return;
+  Future<void> _initAdd() async {
+    AdmobHelper.loadInterstitialAd();
 
-        final width = MediaQuery.of(context).size.width.toInt();
-        final ad = await AdmobHelper.loadBannerAd(
-          size: AdSize(width: width - 27, height: 220),
-        );
-        if (!mounted) return;
+    await Future.delayed(const Duration(seconds: 1));
 
-        setState(() {
-          _bannerAd = ad;
-        });
+    if (!mounted) return;
+
+    try {
+      final width = MediaQuery.of(context).size.width.toInt();
+
+      final ad = await AdmobHelper.loadBannerAd(
+        size: AdSize(width: width - 50, height: 220),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _bannerAd = ad; // শুধু এটুকুই যথেষ্ট
       });
- 
+    } catch (e) {
+      debugPrint("Banner load error: $e");
+
+      setState(() {
+        _bannerAd = null;
+      });
+    }
   }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<WorkflowController>();
@@ -52,7 +63,8 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+                Theme.of(context).scaffoldBackgroundColor,
             floating: true,
             snap: true,
             title: const Text('Workflows'),
@@ -65,7 +77,6 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
                     _SearchBar(controller: controller),
                     const SizedBox(height: 10),
                     _FilterChips(controller: controller),
-                    
                   ],
                 ),
               ),
@@ -73,7 +84,6 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
           ),
         ],
         body: Obx(() {
-             
           if (controller.isLoading.value) {
             return ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -84,7 +94,6 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
               ),
             );
           }
-         
 
           if (controller.hasError.value) {
             return ErrorRetryWidget(
@@ -105,18 +114,22 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
             );
           }
 
-        
-
           return Column(
             children: [
-              _bannerAd == null
-                  ? const SizedBox()
-                  : Container(
-                      width: double.infinity,
-                      height: _bannerAd!.size.height.toDouble(),
-                      alignment: Alignment.center,
-                      child: AdWidget(ad: _bannerAd!),
-                    ),
+              Obx(() {
+                final controller = Get.find<PurchaseController>();
+
+                final showBanner =
+                    _bannerAd != null && !controller.adsRemoved.value;
+
+                if (!showBanner) return const SizedBox();
+
+                return SizedBox(
+                  width: double.infinity,
+                  height: _bannerAd!.size.height.toDouble(),
+                  child: AdWidget(ad: _bannerAd!),
+                );
+              }),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchWorkflows,
@@ -153,7 +166,8 @@ class _SearchBar extends StatelessWidget {
       decoration: InputDecoration(
         hintText: 'Search workflows...',
         prefixIcon: const Icon(Icons.search_rounded, size: 20),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         isDense: true,
         filled: true,
         fillColor: Theme.of(context).cardColor,
@@ -211,7 +225,8 @@ class _FilterChips extends StatelessWidget {
                           : Theme.of(context).dividerColor,
                     ),
                     backgroundColor: Theme.of(context).cardColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   ),
                 ))
             .toList(),
@@ -263,7 +278,9 @@ class _WorkflowCard extends StatelessWidget {
                   child: Icon(
                     Icons.account_tree_rounded,
                     size: 18,
-                    color: workflow.active ? AppTheme.successColor : AppTheme.darkTextMuted,
+                    color: workflow.active
+                        ? AppTheme.successColor
+                        : AppTheme.darkTextMuted,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -291,11 +308,11 @@ class _WorkflowCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 _InfoChip(
                   icon: Icons.calendar_today_rounded,
-                  label: AppUtils.formatDate(workflow.updatedAt.toIso8601String()),
+                  label:
+                      AppUtils.formatDate(workflow.updatedAt.toIso8601String()),
                 ),
               ],
             ),
-            
             if (workflow.tags.isNotEmpty) ...[
               const SizedBox(height: 10),
               Wrap(
@@ -304,7 +321,8 @@ class _WorkflowCard extends StatelessWidget {
                 children: workflow.tags
                     .take(4)
                     .map((tag) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppTheme.primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
@@ -342,7 +360,8 @@ class _InfoChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+        Icon(icon,
+            size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
         const SizedBox(width: 4),
         Text(label, style: Theme.of(context).textTheme.labelSmall),
       ],

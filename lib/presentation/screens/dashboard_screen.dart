@@ -4,6 +4,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/core/services/ads_service.dart';
+import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
+import 'package:n8n_manager/settings/purchase_dialog.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/execution_model.dart';
@@ -20,33 +24,93 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   BannerAd? _bannerAd;
+
   @override
   void initState() {
     super.initState();
     _initAdd();
+    _handleStartupLogic();
+  }
+
+  Future<void> _handleStartupLogic() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final removed = prefs.getBool('ads_removed') ?? false;
+
+      final ads = Get.find<AdsService>(); // replace ref.read
+      ads.loadAppOpenAd(
+        adsShow: true,
+        hasSubscription: removed,
+      );
+    } catch (_) {}
+
+    await _handlePurchaseDialog();
+  }
+
+  Future<void> _handlePurchaseDialog() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final removed = prefs.getBool('ads_removed') ?? false;
+      final hideDialog = prefs.getBool('hide_purchase_dialog') ?? false;
+
+      // ✅ SUBSCRIPTION CHECK (IMPORTANT)
+      final controller = Get.find<PurchaseController>();
+      final isSubscribed = controller.adsRemoved.value;
+
+      if (hideDialog || removed || isSubscribed) return;
+
+      final reminderDate = prefs.getInt('purchase_reminder_date');
+
+      if (reminderDate != null) {
+        final lastReminder = DateTime.fromMillisecondsSinceEpoch(reminderDate);
+
+        final daysSinceReminder =
+            DateTime.now().difference(lastReminder).inDays;
+
+        if (daysSinceReminder < 7) return;
+
+        await prefs.remove('purchase_reminder_date');
+      }
+
+      showPurchasePopup();
+    } catch (_) {}
   }
 
   Future<void> _initAdd() async {
     AdmobHelper.loadInterstitialAd();
 
-    // ⚠️ delay banner load (important)
-    Future.delayed(const Duration(seconds: 1), () async {
-      if (!mounted) return;
+    await Future.delayed(const Duration(seconds: 1));
 
+    if (!mounted) return;
+
+    try {
       final width = MediaQuery.of(context).size.width.toInt();
+
       final ad = await AdmobHelper.loadBannerAd(
         size: AdSize(width: width - 50, height: 220),
       );
+
       if (!mounted) return;
 
       setState(() {
-        _bannerAd = ad;
+        _bannerAd = ad; // শুধু এটুকুই যথেষ্ট
       });
-    });
+    } catch (e) {
+      debugPrint("Banner load error: $e");
+
+      setState(() {
+        _bannerAd = null;
+      });
+    }
   }
 
+  @override
   Widget build(BuildContext context) {
     final controller = Get.find<DashboardController>();
+
     final auth = Get.find<AuthController>();
     return Scaffold(
       body: RefreshIndicator(
@@ -95,14 +159,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   delegate: SliverChildListDelegate([
                     _buildChartSection(context, stats),
                     const SizedBox(height: 8),
-                    _bannerAd == null
-                        ? const SizedBox()
-                        : Container(
-                            width: double.infinity,
-                            height: _bannerAd!.size.height.toDouble(),
-                            alignment: Alignment.center,
-                            child: AdWidget(ad: _bannerAd!),
-                          ),
+                    Obx(() {
+                      final controller = Get.find<PurchaseController>();
+
+                      final showBanner =
+                          _bannerAd != null && !controller.adsRemoved.value;
+
+                      if (!showBanner) return const SizedBox();
+
+                      return SizedBox(
+                        width: double.infinity,
+                        height: _bannerAd!.size.height.toDouble(),
+                        child: AdWidget(ad: _bannerAd!),
+                      );
+                    }),
                     const SizedBox(height: 10),
                     _buildStatsGrid(context, stats),
                     const SizedBox(height: 10),

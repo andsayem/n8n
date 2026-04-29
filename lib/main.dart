@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'presentation/controllers/auth_controller.dart';
@@ -13,8 +14,6 @@ import 'core/services/purchase_service.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:upgrader/upgrader.dart';
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -23,7 +22,7 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
+  Get.put(PurchaseController(), permanent: true);
   // Status bar style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -39,19 +38,23 @@ void main() async {
   // Init controllers
   Get.put<AuthController>(AuthController());
   Get.put<ThemeController>(ThemeController());
-final adHelper = AdmobHelper();
-    // lifecycle observer
-    WidgetsBinding.instance.addObserver(adHelper);
-    // ✅ app open ad
-    adHelper.loadAppOpenAd(
-      onLoaded: () {
-        Future.delayed(const Duration(seconds: 2), () {
-          AdmobHelper.showAppOpenAd();
-        });
-      },
-    ); 
+  final adHelper = AdmobHelper();
+  // lifecycle observer
+  WidgetsBinding.instance.addObserver(adHelper);
 
-    
+  adHelper.loadAppOpenAd(
+    onLoaded: () {
+      Future.delayed(const Duration(seconds: 2), () {
+        final controller = Get.find<PurchaseController>();
+
+        // ✅ ONLY SHOW IF NOT SUBSCRIBED
+        if (!controller.adsRemoved.value) {
+          AdmobHelper.showAppOpenAd();
+        }
+      });
+    },
+  );
+
   // Initialize PurchaseService in the background (non-blocking)
   final purchaseService = PurchaseService();
   // start initialization but do not await so UI can appear quickly
@@ -71,14 +74,11 @@ class N8nManagerApp extends StatelessWidget {
       // Update status bar icons to match active theme
       SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor:
-            isDark ? AppTheme.darkBg : AppTheme.lightBg,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
         systemNavigationBarIconBrightness:
             isDark ? Brightness.light : Brightness.dark,
       ));
-      
 
       return GetMaterialApp(
         title: AppConstants.appName,
@@ -90,8 +90,7 @@ class N8nManagerApp extends StatelessWidget {
         getPages: AppPages.routes,
         defaultTransition: Transition.fadeIn,
         builder: (context, child) {
-
-              return UpgradeAlert(
+          return UpgradeAlert(
             upgrader: Upgrader(
               debugLogging: true,
               // Optional configs:
@@ -105,13 +104,12 @@ class N8nManagerApp extends StatelessWidget {
               child: child!,
             ),
           );
-
-         
         },
       );
     });
   }
 }
+
 void configEasyLoading() {
   EasyLoading.instance
     ..loadingStyle = EasyLoadingStyle.custom

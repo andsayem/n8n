@@ -9,7 +9,7 @@ class AuthService {
 
   factory AuthService({String? baseUrl}) {
     final dio = Dio(BaseOptions(baseUrl: baseUrl ?? ''));
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     return AuthService._(dio, storage);
   }
 
