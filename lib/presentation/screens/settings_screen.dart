@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:n8n_manager/common/admob_helper.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,7 +17,6 @@ import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
-
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
@@ -24,11 +25,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
   String _buildNumber = '';
   final authController = Get.find<AuthController>();
+  BannerAd? _bannerAd;
 
   @override
   void initState() {
     super.initState();
     _loadPackageInfo();
+    _initAdd();
+  }
+
+  Future<void> _initAdd() async {
+    // ✅ SKIP all ad loading if user has subscription
+    try {
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+    } catch (_) {}
+
+    AdmobHelper.loadInterstitialAd();
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    try {
+      // Double-check subscription after delay (may have loaded by now)
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+
+      final width = MediaQuery.of(context).size.width.toInt();
+
+      final ad = await AdmobHelper.loadBannerAd(
+        size: AdSize(width: width - 50, height: 220),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _bannerAd = ad;
+      });
+    } catch (e) {
+      debugPrint("Banner load error: $e");
+
+      setState(() {
+        _bannerAd = null;
+      });
+    }
   }
 
   Future<void> _loadPackageInfo() async {
@@ -91,6 +132,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ]),
+                const SizedBox(height: 20),
+                if (_bannerAd != null)
+                  SizedBox(
+                    width: double.infinity,
+                    height: _bannerAd!.size.height.toDouble(),
+                    child: AdWidget(ad: _bannerAd!),
+                  ),
                 const SizedBox(height: 20),
 
                 // ── Appearance ───────────────────────────────────────────
@@ -199,7 +247,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           subtitle: 'Subscribe to enjoy ad-free experience',
                           icon: Icons.workspace_premium_rounded,
                           iconColor: AppTheme.warningColor,
-                          onTap: () => showPurchasePopup(showPreferenceButtons: false),
+                          onTap: () =>
+                              showPurchasePopup(showPreferenceButtons: false),
                         ),
                       ]),
                       const SizedBox(height: 20),
