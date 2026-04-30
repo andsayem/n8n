@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:n8n_manager/table/data_tables_screen.dart';
 import '../../core/theme/app_theme.dart';
 import '../controllers/dashboard_controller.dart';
 import '../controllers/execution_controller.dart';
 import '../controllers/workflow_controller.dart';
 import 'dashboard_screen.dart';
-import 'data_tables_screen.dart';
 import 'execution_screens.dart';
 import 'settings_screen.dart';
 import 'workflow_list_screen.dart';
@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    DashboardScreen(),
+    const DashboardScreen(),
     const WorkflowListScreen(),
     const ExecutionListScreen(),
     const DataTablesScreen(),
