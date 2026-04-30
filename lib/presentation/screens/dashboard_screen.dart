@@ -39,13 +39,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final prefs = await SharedPreferences.getInstance();
       final removed = prefs.getBool('ads_removed') ?? false;
 
-      final ads = Get.find<AdsService>(); // replace ref.read
+      final ads = Get.find<AdsService>();
       ads.loadAppOpenAd(
         adsShow: true,
         hasSubscription: removed,
       );
     } catch (_) {}
 
+    // ✅ Delay popup a bit more to ensure UI is fully ready
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
     await _handlePurchaseDialog();
   }
 
@@ -53,14 +56,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      final removed = prefs.getBool('ads_removed') ?? false;
       final hideDialog = prefs.getBool('hide_purchase_dialog') ?? false;
 
-      // ✅ SUBSCRIPTION CHECK (IMPORTANT)
+      // ✅ SUBSCRIPTION CHECK — only skip if actually subscribed or user chose "Don't show"
       final controller = Get.find<PurchaseController>();
       final isSubscribed = controller.adsRemoved.value;
 
-      if (hideDialog || removed || isSubscribed) return;
+      print('📋 PurchaseDialog check: hideDialog=$hideDialog, isSubscribed=$isSubscribed');
+
+      if (hideDialog || isSubscribed) {
+        print('📋 PurchaseDialog SKIPPED (hideDialog=$hideDialog, isSubscribed=$isSubscribed)');
+        return;
+      }
 
       final reminderDate = prefs.getInt('purchase_reminder_date');
 
@@ -70,16 +77,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final daysSinceReminder =
             DateTime.now().difference(lastReminder).inDays;
 
-        if (daysSinceReminder < 7) return;
+        if (daysSinceReminder < 7) {
+          print('📋 PurchaseDialog SKIPPED (reminder $daysSinceReminder days ago, < 7)');
+          return;
+        }
 
         await prefs.remove('purchase_reminder_date');
       }
 
+      print('📋 PurchaseDialog SHOWING...');
       showPurchasePopup();
-    } catch (_) {}
+    } catch (e) {
+      print('📋 PurchaseDialog ERROR: $e');
+    }
   }
 
   Future<void> _initAdd() async {
+    // ✅ SKIP all ad loading if user has subscription
+    try {
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+    } catch (_) {}
+
     AdmobHelper.loadInterstitialAd();
 
     await Future.delayed(const Duration(seconds: 1));
@@ -87,6 +106,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
 
     try {
+      // Double-check subscription after delay (may have loaded by now)
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+
       final width = MediaQuery.of(context).size.width.toInt();
 
       final ad = await AdmobHelper.loadBannerAd(
@@ -96,7 +119,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
 
       setState(() {
-        _bannerAd = ad; // শুধু এটুকুই যথেষ্ট
+        _bannerAd = ad;
       });
     } catch (e) {
       debugPrint("Banner load error: $e");
@@ -136,6 +159,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   )),
               actions: [
+                // ✅ Remove Ads button (only shows when not subscribed)
+                Obx(() {
+                  final pc = Get.find<PurchaseController>();
+                  if (pc.adsRemoved.value) return const SizedBox.shrink();
+                  return IconButton(
+                    icon: const Icon(Icons.workspace_premium_rounded),
+                    tooltip: 'Remove Ads',
+                    onPressed: () => showPurchasePopup(showPreferenceButtons: false),
+                  );
+                }),
                 IconButton(
                   icon: const Icon(Icons.refresh_rounded),
                   onPressed: controller.fetchDashboard,
@@ -159,20 +192,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   delegate: SliverChildListDelegate([
                     _buildChartSection(context, stats),
                     const SizedBox(height: 8),
-                    Obx(() {
-                      final controller = Get.find<PurchaseController>();
-
-                      final showBanner =
-                          _bannerAd != null && !controller.adsRemoved.value;
-
-                      if (!showBanner) return const SizedBox();
-
-                      return SizedBox(
+                    // ✅ Banner ad (only shows if loaded — skipped when subscribed)
+                    if (_bannerAd != null)
+                      SizedBox(
                         width: double.infinity,
                         height: _bannerAd!.size.height.toDouble(),
                         child: AdWidget(ad: _bannerAd!),
-                      );
-                    }),
+                      ),
                     const SizedBox(height: 10),
                     _buildStatsGrid(context, stats),
                     const SizedBox(height: 10),

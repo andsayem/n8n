@@ -42,11 +42,6 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
     FocusScope.of(context).unfocus();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_logged_in', true);
-    print('--------++----------------');
-
-    print(_nameController.text.trim());
-    print(_urlController.text.trim());
-    print(_apiKeyController.text.trim());
 
     final success = await _authController.addInstance(
       name: _nameController.text.trim(),
@@ -116,31 +111,34 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.primaryColor, AppTheme.primaryDark],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Icon(Icons.hub_rounded, color: Colors.white, size: 28),
-        ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.3, end: 0),
-        const SizedBox(height: 24),
-        Text(
-          'Connect to\nn8n Server',
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                height: 1.1,
+        Row(
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              child: Center(
+                child: Image.asset(
+                  'assets/icon/icon.png',
+                  width: 70,
+                  height: 70,
+                  fit: BoxFit.contain,
+                ),
               ),
-        )
-            .animate()
-            .fadeIn(delay: 100.ms, duration: 400.ms)
-            .slideY(begin: 0.3, end: 0),
-        const SizedBox(height: 12),
+            ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.3, end: 0),
+            const SizedBox(width: 20),
+            Text(
+              'Connect to\nn8n Server',
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    height: 1.1,
+                  ),
+            )
+                .animate()
+                .fadeIn(delay: 100.ms, duration: 400.ms)
+                .slideY(begin: 0.3, end: 0),
+          ],
+        ),
+        const SizedBox(height: 10),
         Text(
           'Enter your n8n instance details to get started.',
           style: Theme.of(context).textTheme.bodyMedium,
@@ -152,17 +150,17 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
   Widget _buildFormFields() {
     return Column(
       children: [
-        _buildLabel('Instance Name'),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _nameController,
-          decoration: const InputDecoration(
-            hintText: 'My n8n Server',
-            prefixIcon: Icon(Icons.label_rounded),
-          ),
-          validator: (v) => v?.isEmpty == true ? 'Enter a name' : null,
-        ),
-        const SizedBox(height: 20),
+        // _buildLabel('Instance Name'),
+        // const SizedBox(height: 8),
+        // TextFormField(
+        //   controller: _nameController,
+        //   decoration: const InputDecoration(
+        //     hintText: 'My n8n Server',
+        //     prefixIcon: Icon(Icons.label_rounded),
+        //   ),
+        //   validator: (v) => v?.isEmpty == true ? 'Enter a name' : null,
+        // ),
+        //  const SizedBox(height: 20),
         _buildLabel('Server URL'),
         const SizedBox(height: 8),
         TextFormField(
@@ -178,7 +176,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
             return null;
           },
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
         _buildLabel('API Key'),
         const SizedBox(height: 8),
         TextFormField(

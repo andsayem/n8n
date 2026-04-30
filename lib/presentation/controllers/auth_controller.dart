@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/app_utils.dart';
@@ -33,7 +34,7 @@ class AuthController extends GetxController {
 
       final demoInstance = N8nInstance(
         id: const Uuid().v4(),
-        name: "X-N8N-API-KEY",
+        name: "n8n Demo",
         baseUrl: "https://n8n-production-c2c8.up.railway.app/",
         apiKey:
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhOGNiNTMzZi03NWNlLTRiMzAtODhkMy1mY2FmZTViNTZjNDQiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNzZlMjlhYmEtMDBhYi00NWY2LTljYmYtZTc2Y2Q3MmNkZWZiIiwiaWF0IjoxNzc1Mzc1Mzk4fQ.hi17mKMcVjPe7_SF5n4AAOIMMqPUZ1G6fjH9UoXcvdc",
@@ -49,8 +50,16 @@ class AuthController extends GetxController {
       // API configure (important 🔥)
       _configureApi(demoInstance);
 
+      // ✅ Save demo instance to secure storage so it persists on restart
+      await _instanceService.saveInstance(demoInstance);
+      await _instanceService.setActiveInstanceId(demoInstance.id);
+
       // Optional: list e add korte paro
       instances.add(demoInstance);
+
+      // ✅ Mark as logged in
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
 
       Get.offAllNamed(AppRoutes.home);
 
@@ -104,6 +113,10 @@ class AuthController extends GetxController {
       await _instanceService.saveInstance(instance);
       instances.add(instance);
 
+      // ✅ Mark as logged in
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+
       await switchInstance(instance);
       return true;
     } catch (e) {
@@ -137,6 +150,20 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     await _instanceService.clearActiveInstance();
     activeInstance.value = null;
+    Get.offAllNamed(AppRoutes.login);
+  }
+
+  Future<bool> is_logged_in() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('is_logged_in') ?? false;
+  }
+
+  //logout and clear all data
+  Future<void> logoutAndClearData() async {
+    //  await _instanceService.clearAllData();
+    activeInstance.value = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_logged_in', false);
     Get.offAllNamed(AppRoutes.login);
   }
 }

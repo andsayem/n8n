@@ -21,13 +21,19 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _navigate() async {
     await Future.delayed(const Duration(milliseconds: 1200));
 
-    final auth = Get.find<AuthController>();
-    await auth.loadInstances();
+    final authController = Get.find<AuthController>();
 
-    if (!mounted) return;
+    if (await authController.is_logged_in()) {
+      // Ensure instances are loaded and API is configured
+      await authController.loadInstances();
 
-    if (auth.activeInstance.value != null) {
-      Get.offAllNamed('/home');
+      if (authController.activeInstance.value != null) {
+        // API is configured — go to home
+        Get.offAllNamed('/home');
+      } else {
+        // No active instance found — go to login
+        Get.offAllNamed('/login');
+      }
     } else {
       Get.offAllNamed('/login');
     }

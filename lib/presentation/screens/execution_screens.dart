@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
@@ -20,31 +21,51 @@ class ExecutionListScreen extends StatefulWidget {
 }
 
 class _ExecutionListScreenState extends State<ExecutionListScreen> {
-    BannerAd? _bannerAd;
+  BannerAd? _bannerAd;
   @override
-     void initState() {
-    super.initState(); 
+  void initState() {
+    super.initState();
     _initAdd();
   }
-     Future<void> _initAdd() async {
-     AdmobHelper.loadInterstitialAd();
 
-      // ⚠️ delay banner load (important)
-      Future.delayed(const Duration(seconds: 1), () async {
-        if (!mounted) return;
+  Future<void> _initAdd() async {
+    // ✅ SKIP all ad loading if user has subscription
+    try {
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+    } catch (_) {}
 
-        final width = MediaQuery.of(context).size.width.toInt();
-        final ad = await AdmobHelper.loadBannerAd(
-          size: AdSize(width: width - 27, height: 220),
-        );
-        if (!mounted) return;
+    AdmobHelper.loadInterstitialAd();
 
-        setState(() {
-          _bannerAd = ad;
-        });
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    try {
+      // Double-check subscription after delay
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+
+      final width = MediaQuery.of(context).size.width.toInt();
+
+      final ad = await AdmobHelper.loadBannerAd(
+        size: AdSize(width: width - 50, height: 220),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _bannerAd = ad;
       });
- 
+    } catch (e) {
+      debugPrint("Banner load error: $e");
+
+      setState(() {
+        _bannerAd = null;
+      });
+    }
   }
+
   Widget build(BuildContext context) {
     final controller = Get.find<ExecutionController>();
 
@@ -93,11 +114,10 @@ class _ExecutionListScreenState extends State<ExecutionListScreen> {
 
           return Column(
             children: [
-                  if (_bannerAd != null)
-                Container(
+              if (_bannerAd != null)
+                SizedBox(
                   width: double.infinity,
                   height: _bannerAd!.size.height.toDouble(),
-                  alignment: Alignment.center,
                   child: AdWidget(ad: _bannerAd!),
                 ),
               Expanded(
@@ -142,7 +162,8 @@ class _FilterRow extends StatelessWidget {
                         label: Text(f.capitalize!),
                         selected: controller.filterStatus.value == f,
                         onSelected: (_) => controller.setFilter(f),
-                        selectedColor: AppUtils.statusColor(f == 'all' ? 'running' : f),
+                        selectedColor:
+                            AppUtils.statusColor(f == 'all' ? 'running' : f),
                         labelStyle: TextStyle(
                           color: controller.filterStatus.value == f
                               ? Colors.white
@@ -197,7 +218,8 @@ class _ExecutionCard extends StatelessWidget {
                 color: statusColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(AppUtils.statusIcon(execution.status), color: statusColor, size: 20),
+              child: Icon(AppUtils.statusIcon(execution.status),
+                  color: statusColor, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -309,7 +331,8 @@ class _ExecutionDetailScreenState extends State<ExecutionDetailScreen> {
                 5,
                 (i) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: SkeletonLoader(height: 60 + i * 10.0, borderRadius: 12),
+                  child:
+                      SkeletonLoader(height: 60 + i * 10.0, borderRadius: 12),
                 ),
               ),
             ),
@@ -372,13 +395,16 @@ class _ExecutionDetailScreenState extends State<ExecutionDetailScreen> {
             valueColor: AppUtils.statusColor(exec.status),
           ),
           if (exec.startedAt != null)
-            InfoRow(label: 'Started', value: AppUtils.formatDate(exec.startedAt)),
+            InfoRow(
+                label: 'Started', value: AppUtils.formatDate(exec.startedAt)),
           if (exec.stoppedAt != null)
-            InfoRow(label: 'Finished', value: AppUtils.formatDate(exec.stoppedAt)),
+            InfoRow(
+                label: 'Finished', value: AppUtils.formatDate(exec.stoppedAt)),
           if (exec.executionTime != null)
-            InfoRow(label: 'Duration', value: AppUtils.formatDuration(exec.executionTime)),
-          if (exec.mode != null)
-            InfoRow(label: 'Mode', value: exec.mode!),
+            InfoRow(
+                label: 'Duration',
+                value: AppUtils.formatDuration(exec.executionTime)),
+          if (exec.mode != null) InfoRow(label: 'Mode', value: exec.mode!),
         ],
       ),
     ).animate().fadeIn(duration: 300.ms);
@@ -408,7 +434,10 @@ class _ExecutionDetailScreenState extends State<ExecutionDetailScreen> {
       children: [
         Text(
           'Execution Data',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         _JsonViewer(data: exec.data!),
@@ -455,7 +484,8 @@ class _JsonViewerState extends State<_JsonViewer> {
               style: TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 12,
-                color: isDark ? AppTheme.darkTextSecondary : Colors.grey.shade800,
+                color:
+                    isDark ? AppTheme.darkTextSecondary : Colors.grey.shade800,
                 height: 1.6,
               ),
             ),

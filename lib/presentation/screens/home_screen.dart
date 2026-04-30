@@ -31,17 +31,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize controllers
-    Get.put(DashboardController());
-    Get.put(WorkflowController());
-    Get.put(ExecutionController());
+    // Initialize controllers (guard to prevent duplicate registration)
+    if (!Get.isRegistered<DashboardController>()) {
+      Get.put(DashboardController());
+    }
+    if (!Get.isRegistered<WorkflowController>()) {
+      Get.put(WorkflowController());
+    }
+    if (!Get.isRegistered<ExecutionController>()) {
+      Get.put(ExecutionController());
+    }
   }
 
   @override
   void dispose() {
-    Get.delete<DashboardController>();
-    Get.delete<WorkflowController>();
-    Get.delete<ExecutionController>();
+    if (Get.isRegistered<DashboardController>()) {
+      Get.delete<DashboardController>();
+    }
+    if (Get.isRegistered<WorkflowController>()) {
+      Get.delete<WorkflowController>();
+    }
+    if (Get.isRegistered<ExecutionController>()) {
+      Get.delete<ExecutionController>();
+    }
     super.dispose();
   }
 

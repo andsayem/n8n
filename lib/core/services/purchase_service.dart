@@ -79,7 +79,7 @@ class PurchaseService {
       // Restore previous purchases on initialization
       _logs.add('Restoring previous purchases...');
       try {
-        await restorePurchases();
+        await restorePurchases(isAutoRestore: true);
       } catch (e) {
         _logs.add('Restore purchases error: $e');
       }
@@ -203,10 +203,10 @@ class PurchaseService {
     }
   }
 
-  Future<bool> restorePurchases() async {
-    print('Initiating restore purchases...');
+  Future<bool> restorePurchases({bool isAutoRestore = false}) async {
+    print('Initiating restore purchases... (auto=$isAutoRestore)');
     try {
-      _logs.add('Restore requested');
+      _logs.add('Restore requested (auto=$isAutoRestore)');
       
       // Reset purchases found flag for this restore attempt
       _purchasesFound = false;
@@ -238,24 +238,29 @@ class PurchaseService {
         if (_purchasesFound) {
           print('Purchases found during restore.');
           _logs.add('Purchases found - setting ads_removed to true');
-          // Explicitly set ads_removed to true if purchases found
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('ads_removed', true);
-        } else {
-          print('No purchases found during restore.');
-          _logs.add('No purchases found - setting ads_removed to false');
-          // Explicitly set ads_removed to false if no purchases found
+        } else if (!isAutoRestore) {
+          // ✅ ONLY reset to false on explicit user-initiated restore
+          // Auto-restore should NEVER clear a previously saved subscription
+          print('No purchases found during manual restore.');
+          _logs.add('No purchases found (manual) - setting ads_removed to false');
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('ads_removed', false);
+        } else {
+          print('No purchases found during auto-restore - keeping existing state.');
+          _logs.add('No purchases found (auto) - keeping existing ads_removed state');
         }
         
         return result;
       } catch (e) {
         print('Restore wait error: $e');
         _logs.add('Restore future error: $e');
-        // If error during restore, set ads_removed to false
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('ads_removed', false);
+        // On auto-restore error, don't reset ads_removed
+        if (!isAutoRestore) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('ads_removed', false);
+        }
         return true; // No error is a success
       }
     } catch (e) {

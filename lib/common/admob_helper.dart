@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 
 class AdmobHelper with WidgetsBindingObserver {
   //ca-app-pub-1195883693665145/6786028831
@@ -294,6 +296,11 @@ class AdmobHelper with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // ✅ Don't show app open ad if user has subscription
+      try {
+        final controller = Get.find<PurchaseController>();
+        if (controller.adsRemoved.value) return;
+      } catch (_) {}
       showAppOpenAd();
     }
   }

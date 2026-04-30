@@ -27,6 +27,12 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
   }
 
   Future<void> _initAdd() async {
+    // ✅ SKIP all ad loading if user has subscription
+    try {
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+    } catch (_) {}
+
     AdmobHelper.loadInterstitialAd();
 
     await Future.delayed(const Duration(seconds: 1));
@@ -34,6 +40,10 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
     if (!mounted) return;
 
     try {
+      // Double-check subscription after delay
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+
       final width = MediaQuery.of(context).size.width.toInt();
 
       final ad = await AdmobHelper.loadBannerAd(
@@ -43,7 +53,7 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
       if (!mounted) return;
 
       setState(() {
-        _bannerAd = ad; // শুধু এটুকুই যথেষ্ট
+        _bannerAd = ad;
       });
     } catch (e) {
       debugPrint("Banner load error: $e");
@@ -116,20 +126,13 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
 
           return Column(
             children: [
-              Obx(() {
-                final controller = Get.find<PurchaseController>();
-
-                final showBanner =
-                    _bannerAd != null && !controller.adsRemoved.value;
-
-                if (!showBanner) return const SizedBox();
-
-                return SizedBox(
+              // ✅ Banner ad (only shows if loaded — skipped when subscribed)
+              if (_bannerAd != null)
+                SizedBox(
                   width: double.infinity,
                   height: _bannerAd!.size.height.toDouble(),
                   child: AdWidget(ad: _bannerAd!),
-                );
-              }),
+                ),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchWorkflows,

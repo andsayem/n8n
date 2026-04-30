@@ -5,6 +5,7 @@ import 'package:n8n_manager/common/admob_helper.dart';
 import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/ads_service.dart';
 import 'presentation/controllers/auth_controller.dart';
 import 'presentation/controllers/theme_controller.dart';
 import 'presentation/routes/app_pages.dart';
@@ -54,6 +55,10 @@ void main() async {
       });
     },
   );
+
+  // Register AdsService with GetX (fixes Get.find<AdsService>() in dashboard)
+  final adsService = Get.put<AdsService>(AdsService(), permanent: true);
+  await adsService.initialize();
 
   // Initialize PurchaseService in the background (non-blocking)
   final purchaseService = PurchaseService();
