@@ -3,7 +3,7 @@ import 'package:n8n_manager/presentation/screens/splash_screen.dart';
 import '../../core/constants/app_constants.dart';
 import '../screens/execution_screens.dart';
 import '../screens/home_screen.dart';
-import '../screens/login_screen.dart' hide SplashScreen;
+import '../screens/login_screen.dart';
 import '../screens/workflow_detail_screen.dart';
 
 class AppPages {

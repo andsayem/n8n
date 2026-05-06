@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
-import '../../core/theme/app_theme.dart';
 import '../controllers/auth_controller.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,55 +41,27 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBg,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        backgroundColor: Colors.white,
+        body: SafeArea(
+            child: Column(
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.primaryDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.4),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child:
-                  const Icon(Icons.hub_rounded, color: Colors.white, size: 40),
-            ).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(
-                  begin: 1,
-                  end: 1.05,
-                  duration: 800.ms,
-                  curve: Curves.easeInOut,
-                ),
-            const SizedBox(height: 24),
-            Text(
-              'n8n Manager',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ).animate().fadeIn(delay: 300.ms, duration: 500.ms),
-            const SizedBox(height: 8),
-            Text(
-              'Automation at your fingertips',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white70,
-                  ),
-            ).animate().fadeIn(delay: 500.ms, duration: 500.ms),
+            const SizedBox(
+              height: 190,
+            ),
+            Image.asset(
+              "assets/icon/n8n_logo.png",
+              height: 200,
+              width: 200,
+            ),
+            const Spacer(),
+            const SpinKitCircle(
+              color: Colors.deepOrange,
+              size: 60,
+            ),
+            const SizedBox(
+              height: 30,
+            ),
           ],
-        ),
-      ),
-    );
+        )));
   }
 }
