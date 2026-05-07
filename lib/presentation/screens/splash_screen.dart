@@ -22,15 +22,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final authController = Get.find<AuthController>();
 
-    if (await authController.is_logged_in()) {
-      // Ensure instances are loaded and API is configured
+    if (await authController.isLoggedIn()) {
       await authController.loadInstances();
 
       if (authController.activeInstance.value != null) {
-        // API is configured — go to home
         Get.offAllNamed('/home');
       } else {
-        // No active instance found — go to login
         Get.offAllNamed('/login');
       }
     } else {

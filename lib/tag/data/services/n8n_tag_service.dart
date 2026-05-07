@@ -1,22 +1,18 @@
 import 'package:dio/dio.dart';
-import 'package:n8n_manager/tag/error_handler.dart';
-import 'package:n8n_manager/tag/tag_model.dart';
+import '../models/n8n_tag_model.dart';
+import 'n8n_error_handler.dart';
 
 class N8nTagService {
   final Dio _dio;
-
   N8nTagService(this._dio);
 
   /// GET /api/v1/tags
   Future<N8nTagList> getTags({int limit = 100, String? cursor}) async {
     try {
-      final response = await _dio.get(
-        '/api/v1/tags',
-        queryParameters: {
-          'limit': limit,
-          if (cursor != null) 'cursor': cursor,
-        },
-      );
+      final response = await _dio.get('/api/v1/tags', queryParameters: {
+        'limit': limit,
+        if (cursor != null) 'cursor': cursor,
+      });
       return N8nTagList.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw handleDioError(e);
@@ -36,10 +32,7 @@ class N8nTagService {
   /// POST /api/v1/tags
   Future<N8nTag> createTag(String name) async {
     try {
-      final response = await _dio.post(
-        '/api/v1/tags',
-        data: {'name': name},
-      );
+      final response = await _dio.post('/api/v1/tags', data: {'name': name});
       return N8nTag.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw handleDioError(e);
@@ -49,10 +42,8 @@ class N8nTagService {
   /// PUT /api/v1/tags/{id}
   Future<N8nTag> updateTag(String id, String newName) async {
     try {
-      final response = await _dio.put(
-        '/api/v1/tags/$id',
-        data: {'name': newName},
-      );
+      final response =
+          await _dio.put('/api/v1/tags/$id', data: {'name': newName});
       return N8nTag.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw handleDioError(e);
@@ -68,15 +59,15 @@ class N8nTagService {
     }
   }
 
-  /// সব page auto-fetch করে সব tag নিয়ে আসে
+  /// সব page একসাথে fetch করে
   Future<List<N8nTag>> getAllTags() async {
-    final allTags = <N8nTag>[];
+    final all = <N8nTag>[];
     String? cursor;
     do {
       final result = await getTags(limit: 100, cursor: cursor);
-      allTags.addAll(result.data);
+      all.addAll(result.data);
       cursor = result.nextCursor;
     } while (cursor != null);
-    return allTags;
+    return all;
   }
 }

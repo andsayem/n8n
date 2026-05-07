@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -62,10 +63,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final controller = Get.find<PurchaseController>();
       final isSubscribed = controller.adsRemoved.value;
 
-      print('📋 PurchaseDialog check: hideDialog=$hideDialog, isSubscribed=$isSubscribed');
+      if (kDebugMode) {
+        print(
+            '📋 PurchaseDialog check: hideDialog=$hideDialog, isSubscribed=$isSubscribed');
+      }
 
       if (hideDialog || isSubscribed) {
-        print('📋 PurchaseDialog SKIPPED (hideDialog=$hideDialog, isSubscribed=$isSubscribed)');
+        if (kDebugMode) {
+          print(
+              '📋 PurchaseDialog SKIPPED (hideDialog=$hideDialog, isSubscribed=$isSubscribed)');
+        }
         return;
       }
 
@@ -78,7 +85,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             DateTime.now().difference(lastReminder).inDays;
 
         if (daysSinceReminder < 7) {
-          print('📋 PurchaseDialog SKIPPED (reminder $daysSinceReminder days ago, < 7)');
+          print(
+              '📋 PurchaseDialog SKIPPED (reminder $daysSinceReminder days ago, < 7)');
           return;
         }
 
@@ -134,7 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final controller = Get.find<DashboardController>();
 
-    final auth = Get.find<AuthController>();
+    Get.find<AuthController>();
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: controller.fetchDashboard,
@@ -143,21 +151,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           slivers: [
             SliverAppBar(
               floating: true,
+              title: const Text('Dashboard'),
               snap: true,
-              title: Obx(() => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        auth.activeInstance.value?.name ?? 'Dashboard',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      Text(
-                        auth.activeInstance.value?.baseUrl ?? '',
-                        style: Theme.of(context).textTheme.labelSmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  )),
               actions: [
                 // ✅ Remove Ads button (only shows when not subscribed)
                 Obx(() {
@@ -166,7 +161,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return IconButton(
                     icon: const Icon(Icons.workspace_premium_rounded),
                     tooltip: 'Remove Ads',
-                    onPressed: () => showPurchasePopup(showPreferenceButtons: false),
+                    onPressed: () =>
+                        showPurchasePopup(showPreferenceButtons: false),
                   );
                 }),
                 IconButton(

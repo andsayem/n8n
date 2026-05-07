@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:n8n_manager/services/n8n_api_service.dart';
 import 'package:n8n_manager/table/data_tables_screen.dart';
+import 'package:n8n_manager/tag/data/services/n8n_credential_service.dart';
+import 'package:n8n_manager/tag/data/services/n8n_tag_service.dart';
+import 'package:n8n_manager/tag/modules/credentials/controllers/credential_controller.dart';
+import 'package:n8n_manager/tag/modules/tags/controllers/tag_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../controllers/dashboard_controller.dart';
 import '../controllers/execution_controller.dart';
@@ -41,6 +46,22 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!Get.isRegistered<ExecutionController>()) {
       Get.put(ExecutionController());
     }
+    // ── Tags & Credentials ──────────────────────────────────────────────────
+
+    final apiService = Get.find<N8nApiService>();
+
+    if (!Get.isRegistered<N8nTagService>()) {
+      Get.put(N8nTagService(apiService.dio));
+    }
+    if (!Get.isRegistered<N8nCredentialService>()) {
+      Get.put(N8nCredentialService(apiService.dio));
+    }
+    if (!Get.isRegistered<TagController>()) {
+      Get.put(TagController(Get.find<N8nTagService>()));
+    }
+    if (!Get.isRegistered<CredentialController>()) {
+      Get.put(CredentialController(Get.find<N8nCredentialService>()));
+    }
   }
 
   @override
@@ -54,6 +75,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (Get.isRegistered<ExecutionController>()) {
       Get.delete<ExecutionController>();
     }
+
+    // ── Tags & Credentials ──────────────────────────────────────────────────
+    if (Get.isRegistered<TagController>()) Get.delete<TagController>();
+    if (Get.isRegistered<CredentialController>()) {
+      Get.delete<CredentialController>();
+    }
+    if (Get.isRegistered<N8nTagService>()) Get.delete<N8nTagService>();
+    if (Get.isRegistered<N8nCredentialService>()) {
+      Get.delete<N8nCredentialService>();
+    }
+
     super.dispose();
   }
 
