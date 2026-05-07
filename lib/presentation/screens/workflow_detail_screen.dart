@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-
+import 'package:n8n_manager/presentation/controllers/workflow__details_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/workflow_model.dart';
-import '../controllers/workflow_controller.dart';
 import '../widgets/common_widgets.dart';
 
 class WorkflowDetailScreen extends StatefulWidget {

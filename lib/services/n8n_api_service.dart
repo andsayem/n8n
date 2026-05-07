@@ -9,8 +9,18 @@ class N8nApiService extends GetxService {
   Dio get dio => _dio;
   String _baseUrl = '';
   String _apiKey = '';
-  final bool _isMockMode = false;
+  bool _isMockMode = false;
+
   bool get isMockMode => _isMockMode;
+
+  void enableMockMode() {
+    _isMockMode = true;
+  }
+
+  void disableMockMode() {
+    _isMockMode = false;
+  }
+
   void configure(String baseUrl, String apiKey) {
     _baseUrl = baseUrl;
     _apiKey = apiKey;

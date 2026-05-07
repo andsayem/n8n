@@ -19,21 +19,21 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Lock to portrait
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // await SystemChrome.setPreferredOrientations([
+  //   DeviceOrientation.portraitUp,
+  //   DeviceOrientation.portraitDown,
+  // ]);
   Get.put(PurchaseController(), permanent: true);
   // Status bar style
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
 
   // Init services
-  await Get.putAsync<InstanceService>(
-    () => InstanceService().init(),
-  );
+  await Get.putAsync<InstanceService>(() => InstanceService().init());
   Get.put<N8nApiService>(N8nApiService());
 
   // Init controllers
@@ -77,13 +77,16 @@ class N8nManagerApp extends StatelessWidget {
       final isDark = themeCtrl.isDarkMode.value;
 
       // Update status bar icons to match active theme
-      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        systemNavigationBarColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
-        systemNavigationBarIconBrightness:
-            isDark ? Brightness.light : Brightness.dark,
-      ));
+      SystemChrome.setSystemUIOverlayStyle(
+        SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          systemNavigationBarColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
+          systemNavigationBarIconBrightness: isDark
+              ? Brightness.light
+              : Brightness.dark,
+        ),
+      );
 
       return GetMaterialApp(
         title: AppConstants.appName,
@@ -104,8 +107,9 @@ class N8nManagerApp extends StatelessWidget {
               // showLater: true,
             ),
             child: MediaQuery(
-              data: MediaQuery.of(context)
-                  .copyWith(textScaler: TextScaler.noScaling),
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.noScaling),
               child: child!,
             ),
           );

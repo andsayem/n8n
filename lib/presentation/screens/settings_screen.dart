@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/tag/modules/credentials/views/credential_list_screen.dart';
+import 'package:n8n_manager/tag/modules/tags/views/tag_list_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -132,6 +134,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ]),
+                const SizedBox(height: 20),
+
+                // ── Manage (Tags & Credentials) ────────────────────────────
+                _buildSection(context, 'Manage', [
+                  _ActionTile(
+                    title: 'Tags',
+                    subtitle: 'Organize workflows with tags',
+                    icon: Icons.label_rounded,
+                    iconColor: AppTheme.primaryColor,
+                    onTap: () => Get.to(() => const TagListScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Credentials',
+                    subtitle: 'Manage API keys and connections',
+                    icon: Icons.key_rounded,
+                    iconColor: AppTheme.warningColor,
+                    onTap: () => Get.to(() => const CredentialListScreen()),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
                 const SizedBox(height: 20),
                 if (_bannerAd != null)
                   SizedBox(
