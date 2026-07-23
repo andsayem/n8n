@@ -41,6 +41,7 @@ class _AdaptiveBannerState extends ConsumerState<AdaptiveBanner> {
       _loading = false;
       return;
     }
+    if (!mounted) return;
 
     try {
       final ads = ref.read(adsServiceProvider);
@@ -70,7 +71,7 @@ class _AdaptiveBannerState extends ConsumerState<AdaptiveBanner> {
               ad.dispose();
             } catch (_) {}
             if (!mounted) return;
-            print('❌ AdaptiveBanner failed: Code ${err.code} - ${err.message}');
+            debugPrint('AdaptiveBanner failed: Code ${err.code} - ${err.message}');
             setState(() {
               _loaded = false;
               _bannerAd = null;
@@ -82,7 +83,7 @@ class _AdaptiveBannerState extends ConsumerState<AdaptiveBanner> {
 
       await created.load();
     } catch (e) {
-      print('❌ AdaptiveBanner error: $e');
+      debugPrint('AdaptiveBanner error: $e');
       _bannerAd = null;
       _loaded = false;
       _loading = false;

@@ -163,7 +163,7 @@ class AdmobHelper with WidgetsBindingObserver {
     final width = MediaQuery.of(context).size.width.toInt();
 
     final AnchoredAdaptiveBannerAdSize? size =
-        await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
+        await AdSize.getLargeAnchoredAdaptiveBannerAdSize(width);
 
     if (size == null) return null;
 
@@ -249,7 +249,7 @@ class AdmobHelper with WidgetsBindingObserver {
   static AppOpenAd? _appOpenAd;
   static DateTime? _appOpenLoadTime;
   static bool _isShowingAppOpen = false;
-  static final Duration maxCacheDuration = const Duration(hours: 4);
+  static const Duration maxCacheDuration = Duration(hours: 4);
 
   void loadAppOpenAd({Function()? onLoaded}) {
     AppOpenAd.load(

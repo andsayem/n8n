@@ -184,7 +184,7 @@ class _SearchBar extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppTheme.primaryColor),
+          borderSide: const BorderSide(color: AppTheme.primaryColor),
         ),
         suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
             ? IconButton(

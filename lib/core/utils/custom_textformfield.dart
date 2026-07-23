@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:n8n_manager/core/utils/app_colors.dart';
 import 'package:n8n_manager/core/utils/app_sizer.dart';
- 
+
 class CustomInputField extends StatelessWidget {
   const CustomInputField({
     super.key,
@@ -70,7 +70,7 @@ class CustomInputField extends StatelessWidget {
       ),
       borderSide: borderSide != null
           ? borderSide!
-          : BorderSide(width: 1.w, color: Color(0xFFD1D1D1)),
+          : BorderSide(width: 1.w, color: const Color(0xFFD1D1D1)),
     );
   }
 
@@ -123,7 +123,7 @@ class CustomInputField extends StatelessWidget {
                 ),
               ),
             ),
-          if (headerTitle != null) SizedBox(height: 8),
+          if (headerTitle != null) const SizedBox(height: 8),
           TextFormField(
             readOnly: isReadOnly ?? false,
             maxLines: maxLines ?? 1,

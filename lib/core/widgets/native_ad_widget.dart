@@ -33,7 +33,7 @@ class _NativeAdWidgetState extends ConsumerState<NativeAdWidget> {
       // Check if user has purchased (ads removed)
       final purchaseService = ref.read(purchaseServiceProvider);
       final adsRemoved = await purchaseService.getAdsRemovedLocal();
-      print('Ads removed: $adsRemoved');
+      debugPrint('Ads removed: $adsRemoved');
       
       if (adsRemoved) {
         // User purchased, don't load ads

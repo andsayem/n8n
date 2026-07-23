@@ -31,7 +31,7 @@ class AuthService {
     await secureStorage.write(key: 'apiKey', value: apiKey);
     await secureStorage.write(key: 'isDemo', value: isDemo ? 'true' : 'false');
     dio.options.baseUrl = instanceUrl;
-    dio.options.headers['X-N8N-API-KEY'] = '$apiKey';
+    dio.options.headers['X-N8N-API-KEY'] = apiKey;
   }
 
   Future<String?> readApiKeyFor(String instanceUrl) async {

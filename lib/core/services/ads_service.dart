@@ -48,10 +48,10 @@ class AdsService {
           onAdLoaded: (ad) {
             _appOpenAd = ad;
             _appOpenAdLoading = false;
-            print('AdsService: AppOpenAd showed full screen content. ${adsShow}');
+            debugPrint('AdsService: AppOpenAd loaded. show=$adsShow');
             if (adsShow) {
               showAppOpenAd();
-              print('AdsService: AppOpenAd showed full screen content.');
+              debugPrint('AdsService: AppOpenAd showed full screen content.');
             }
             ad.fullScreenContentCallback = FullScreenContentCallback(
               onAdDismissedFullScreenContent: (ad) {
@@ -72,8 +72,7 @@ class AdsService {
             // log for debugging
             // err.code: 0 internal, 1 invalid request, 2 network, 3 no fill
             try {
-              // ignore: avoid_print
-              print('❌ AppOpenAd failed to load: Code ${err.code} - ${err.message}');
+              debugPrint('AppOpenAd failed to load: Code ${err.code} - ${err.message}');
             } catch (_) {}
           },
         ),
@@ -118,8 +117,7 @@ class AdsService {
             _interstitialLoading = false;
             _interstitialAd = null;
             try {
-              // ignore: avoid_print
-              print('❌ Interstitial failed to load: Code ${err.code} - ${err.message}');
+              debugPrint('Interstitial failed to load: Code ${err.code} - ${err.message}');
             } catch (_) {}
           },
         ),
