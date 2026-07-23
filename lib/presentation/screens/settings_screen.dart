@@ -433,6 +433,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () async {
               await authController.logoutAndClearData();
+              if (!ctx.mounted) return;
               Navigator.pop(ctx);
               auth.logout();
             },

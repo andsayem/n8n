@@ -41,6 +41,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
       _loading = false;
       return;
     }
+    if (!mounted) return;
     
     try {
       final ads = ref.read(adsServiceProvider);
@@ -51,7 +52,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
       AdSize adSize = widget.size;
       
       try {
-        final adaptive = await AdSize.getAnchoredAdaptiveBannerAdSize(orientation, width);
+        final adaptive = await AdSize.getLargeAnchoredAdaptiveBannerAdSizeWithOrientation(orientation, width);
         if (adaptive != null) {
           adSize = adaptive;
         }
@@ -78,7 +79,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
             } catch (_) {}
             if (!mounted) return;
             // ignore: avoid_print
-            print('❌ BannerAd failed to load: Code ${err.code} - ${err.message}');
+            debugPrint('BannerAd failed to load: Code ${err.code} - ${err.message}');
             setState(() {
               _loaded = false;
               _bannerAd = null;

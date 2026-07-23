@@ -465,8 +465,9 @@ class DataTableService extends GetxService {
   }
 
   List<Map<String, dynamic>> _parseList(dynamic data) {
-    if (data is Map && data['data'] is List)
+    if (data is Map && data['data'] is List) {
       return (data['data'] as List).cast<Map<String, dynamic>>();
+    }
     if (data is List) return data.cast<Map<String, dynamic>>();
     return [];
   }

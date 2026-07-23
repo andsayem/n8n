@@ -64,14 +64,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final isSubscribed = controller.adsRemoved.value;
 
       if (kDebugMode) {
-        print(
-            '📋 PurchaseDialog check: hideDialog=$hideDialog, isSubscribed=$isSubscribed');
+        debugPrint(
+            'PurchaseDialog check: hideDialog=$hideDialog, isSubscribed=$isSubscribed');
       }
 
       if (hideDialog || isSubscribed) {
         if (kDebugMode) {
-          print(
-              '📋 PurchaseDialog SKIPPED (hideDialog=$hideDialog, isSubscribed=$isSubscribed)');
+          debugPrint(
+              'PurchaseDialog SKIPPED (hideDialog=$hideDialog, isSubscribed=$isSubscribed)');
         }
         return;
       }
@@ -85,18 +85,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             DateTime.now().difference(lastReminder).inDays;
 
         if (daysSinceReminder < 7) {
-          print(
-              '📋 PurchaseDialog SKIPPED (reminder $daysSinceReminder days ago, < 7)');
+          if (kDebugMode) {
+            debugPrint(
+                'PurchaseDialog SKIPPED (reminder $daysSinceReminder days ago, < 7)');
+          }
           return;
         }
 
         await prefs.remove('purchase_reminder_date');
       }
 
-      print('📋 PurchaseDialog SHOWING...');
+      debugPrint('PurchaseDialog SHOWING...');
       showPurchasePopup();
     } catch (e) {
-      print('📋 PurchaseDialog ERROR: $e');
+      debugPrint('PurchaseDialog ERROR: $e');
     }
   }
 

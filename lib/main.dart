@@ -24,10 +24,9 @@ void main() async {
   //   DeviceOrientation.portraitDown,
   // ]);
   Get.put(PurchaseController(), permanent: true);
-  // Status bar style
+  // Status bar style — only statusBarIconBrightness works in edge-to-edge (SDK 35+)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ),
   );
@@ -77,14 +76,11 @@ class N8nManagerApp extends StatelessWidget {
       final isDark = themeCtrl.isDarkMode.value;
 
       // Update status bar icons to match active theme
+      // statusBarColor and systemNavigationBarColor are ignored on SDK 35+
+      // edge-to-edge mode — only icon brightness is effective.
       SystemChrome.setSystemUIOverlayStyle(
         SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
           statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-          systemNavigationBarColor: isDark ? AppTheme.darkBg : AppTheme.lightBg,
-          systemNavigationBarIconBrightness: isDark
-              ? Brightness.light
-              : Brightness.dark,
         ),
       );
 

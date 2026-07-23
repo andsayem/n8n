@@ -284,6 +284,12 @@ class DataTableEditController extends GetxController {
     columns.insert(newIndex, col);
   }
 
+  void reorderColumnItem(dynamic item, int newIndex) {
+    final col = item as TableColumn;
+    columns.remove(col);
+    columns.insert(newIndex, col);
+  }
+
   Future<DataTableModel?> createTable(String name, String description) async {
     isSaving.value = true;
     errorMessage.value = '';

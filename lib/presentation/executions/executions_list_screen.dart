@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:n8n_manager/core/utils/app_colors.dart';
 import 'package:n8n_manager/core/utils/custom_textformfield.dart';
 import 'package:n8n_manager/core/utils/customtext.dart';
-import 'package:n8n_manager/core/widgets/banner_ad_widget.dart'; 
+import 'package:n8n_manager/core/widgets/banner_ad_widget.dart';
 import 'executions_viewmodel.dart';
 
 class ExecutionsListScreen extends ConsumerStatefulWidget {
@@ -97,17 +97,17 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
               ],
               if (message != null) ...[
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Message:',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(message.toString(), style: const TextStyle(fontSize: 12)),
               ],
               if (stack != null) ...[
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Stack:',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -164,7 +164,7 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
     final state = ref.watch(executionsViewModelProvider);
     return Scaffold(
       appBar: AppBar(
-        title: CustomText(
+        title: const CustomText(
           text: 'Executions',
           fontWeight: FontWeight.bold,
           color: AppColors.textPrimary,
@@ -178,7 +178,7 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
       body: Column(
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
               children: [
                 CustomInputField(
@@ -186,11 +186,10 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
                   prefixIcon: Icons.search,
                   textController: _searchController,
                 ),
-                SizedBox(width: 16.0),
-
+                const SizedBox(width: 16.0),
                 Row(
                   children: [
-                    CustomText(text: 'Filter:'),
+                    const CustomText(text: 'Filter:'),
                     const SizedBox(width: 8),
                     ChoiceChip(
                       label: const Text('All'),

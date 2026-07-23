@@ -5,8 +5,8 @@ class AppColors {
 
   // Brand Colors
   static const Color primary = Color(0xFF283593);
-  static Color secondary = Color(0xFF403326);
-  static Color secondaryBottomNavbar = Color(0xFFF5EDE0);
+  static Color secondary = const Color(0xFF403326);
+  static Color secondaryBottomNavbar = const Color(0xFFF5EDE0);
 
   // Gradient Colors
   static const Gradient linearGradient = LinearGradient(

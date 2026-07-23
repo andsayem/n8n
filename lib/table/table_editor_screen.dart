@@ -126,8 +126,9 @@ class _TableEditorScreenState extends State<TableEditorScreen> {
           children: [
             // Error banner
             Obx(() {
-              if (_ctrl.errorMessage.value.isEmpty)
+              if (_ctrl.errorMessage.value.isEmpty) {
                 return const SizedBox.shrink();
+              }
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),
@@ -200,7 +201,7 @@ class _TableEditorScreenState extends State<TableEditorScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _ctrl.columns.length,
-                onReorder: _ctrl.reorderColumns,
+                onReorderItem: _ctrl.reorderColumnItem,
                 itemBuilder: (ctx, i) {
                   final col = _ctrl.columns[i];
                   return ColumnTile(
