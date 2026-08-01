@@ -7,14 +7,17 @@ class DataTableListController extends GetxController {
   final DataTableService _svc = Get.put(DataTableService());
 
   final RxList<DataTableModel> tables = <DataTableModel>[].obs;
+  final RxList<DataTableModel> filteredTables = <DataTableModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool hasError = false.obs;
   final RxString errorMessage = ''.obs;
+  final RxString searchQuery = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     fetchTables();
+    ever(searchQuery, (_) => _applyFilter());
   }
 
   Future<void> fetchTables() async {
@@ -22,6 +25,7 @@ class DataTableListController extends GetxController {
     hasError.value = false;
     try {
       tables.value = await _svc.getTables();
+      _applyFilter();
     } catch (e) {
       hasError.value = true;
       errorMessage.value = e.toString().replaceFirst('Exception: ', '');
@@ -29,6 +33,23 @@ class DataTableListController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  void _applyFilter() {
+    var list = List<DataTableModel>.from(tables);
+
+    if (searchQuery.value.isNotEmpty) {
+      final q = searchQuery.value.toLowerCase();
+      list = list
+          .where((t) =>
+              t.name.toLowerCase().contains(q) ||
+              t.description.toLowerCase().contains(q))
+          .toList();
+    }
+
+    filteredTables.value = list;
+  }
+
+  void setSearch(String q) => searchQuery.value = q;
 
   Future<void> deleteTable(String id) async {
     try {

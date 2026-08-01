@@ -143,6 +143,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
 import 'package:n8n_manager/presentation/controllers/data_tables_controller.dart';
 import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
+import 'package:n8n_manager/presentation/widgets/banner_ad_view.dart';
 import 'package:n8n_manager/presentation/widgets/common_widgets.dart';
 import 'package:n8n_manager/table/empty_tables_widget.dart';
 import 'package:n8n_manager/table/table_card.dart';
@@ -220,8 +221,9 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              floating: true,
-              snap: true,
+              backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+                  Theme.of(context).scaffoldBackgroundColor,
+              pinned: true,
               title: const Text('Data Tables'),
               actions: [
                 IconButton(
@@ -230,6 +232,13 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
                   onPressed: () => _openTableEditor(context, ctrl, null),
                 ),
               ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(68),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: _SearchBar(controller: ctrl),
+                ),
+              ),
             ),
 
             // ── Banner Ad ───────────────────────────────────────────────────
@@ -239,11 +248,7 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: _bannerAd!.size.height.toDouble(),
-                      child: AdWidget(ad: _bannerAd!),
-                    ),
+                    child: BannerAdView(ad: _bannerAd),
                   ),
                 ),
               ),
@@ -271,11 +276,18 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
                   ),
                 );
               }
-              if (ctrl.tables.isEmpty) {
+              if (ctrl.filteredTables.isEmpty) {
                 return SliverFillRemaining(
-                  child: EmptyTablesWidget(
-                    onCreateTap: () => _openTableEditor(context, ctrl, null),
-                  ),
+                  child: ctrl.searchQuery.value.isNotEmpty
+                      ? const EmptyStateWidget(
+                          title: 'No Results Found',
+                          subtitle: 'Try a different search term.',
+                          icon: Icons.search_off_rounded,
+                        )
+                      : EmptyTablesWidget(
+                          onCreateTap: () =>
+                              _openTableEditor(context, ctrl, null),
+                        ),
                 );
               }
               return SliverPadding(
@@ -283,18 +295,19 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (ctx, i) => TableCard(
-                      table: ctrl.tables[i],
+                      table: ctrl.filteredTables[i],
                       index: i,
-                      onEdit: () =>
-                          _openTableEditor(context, ctrl, ctrl.tables[i]),
+                      onEdit: () => _openTableEditor(
+                          context, ctrl, ctrl.filteredTables[i]),
                       onDelete: () =>
-                          _confirmDelete(context, ctrl, ctrl.tables[i]),
+                          _confirmDelete(context, ctrl, ctrl.filteredTables[i]),
                       onOpen: () => Get.to(
-                        () => DataTableDetailScreen(tableId: ctrl.tables[i].id),
+                        () => DataTableDetailScreen(
+                            tableId: ctrl.filteredTables[i].id),
                         transition: Transition.rightToLeft,
                       ),
                     ),
-                    childCount: ctrl.tables.length,
+                    childCount: ctrl.filteredTables.length,
                   ),
                 ),
               );
@@ -348,6 +361,46 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  final DataTableListController controller;
+
+  const _SearchBar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      onChanged: controller.setSearch,
+      decoration: InputDecoration(
+        hintText: 'Search tables...',
+        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        isDense: true,
+        filled: true,
+        fillColor: Theme.of(context).cardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppTheme.primaryColor),
+        ),
+        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear_rounded, size: 18),
+                onPressed: () => controller.setSearch(''),
+              )
+            : const SizedBox.shrink()),
       ),
     );
   }

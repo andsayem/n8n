@@ -8,16 +8,19 @@ class ExecutionController extends GetxController {
   final N8nApiService _apiService = Get.find<N8nApiService>();
 
   final RxList<ExecutionModel> executions = <ExecutionModel>[].obs;
+  final RxList<ExecutionModel> filteredExecutions = <ExecutionModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxString errorMessage = ''.obs;
   final RxBool hasError = false.obs;
   final RxString filterStatus = 'all'.obs;
+  final RxString searchQuery = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
     fetchExecutions();
     ever(filterStatus, (_) => fetchExecutions());
+    ever(searchQuery, (_) => _applyFilter());
   }
 
   Future<void> fetchExecutions() async {
@@ -46,6 +49,7 @@ class ExecutionController extends GetxController {
             .map((e) => ExecutionModel.fromJson(e))
             .toList();
 
+        _applyFilter();
         return;
       }
 
@@ -57,6 +61,7 @@ class ExecutionController extends GetxController {
           await _apiService.getExecutions(limit: 50, status: status);
 
       executions.value = result;
+      _applyFilter();
     } catch (e) {
       hasError.value = true;
       errorMessage.value = e.toString().replaceFirst('Exception: ', '');
@@ -65,6 +70,29 @@ class ExecutionController extends GetxController {
     }
   }
 
+  void _applyFilter() {
+    var list = List<ExecutionModel>.from(executions);
+
+    if (filterStatus.value != 'all') {
+      list = list
+          .where((e) => e.status.toLowerCase() == filterStatus.value)
+          .toList();
+    }
+
+    if (searchQuery.value.isNotEmpty) {
+      final q = searchQuery.value.toLowerCase();
+      list = list
+          .where((e) =>
+              (e.workflowName?.toLowerCase().contains(q) ?? false) ||
+              e.id.toLowerCase().contains(q) ||
+              e.status.toLowerCase().contains(q))
+          .toList();
+    }
+
+    filteredExecutions.value = list;
+  }
+
+  void setSearch(String q) => searchQuery.value = q;
   void setFilter(String status) => filterStatus.value = status;
 }
 

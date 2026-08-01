@@ -209,6 +209,9 @@ class AuthController extends GetxController {
 
       isDemoMode.value = true;
 
+      // ✅ Mock mode ON — services return demo/mock data
+      _apiService.enableMockMode();
+
       final demoInstance = N8nInstance(
         id: const Uuid().v4(),
         name: "n8n Demo",
@@ -250,6 +253,11 @@ class AuthController extends GetxController {
 
       if (activeInstance.value != null) {
         _configureApi(activeInstance.value!);
+        if (isDemo) {
+          _apiService.enableMockMode();
+        } else {
+          _apiService.disableMockMode();
+        }
       }
     } catch (e) {
       errorMessage.value = 'Failed to load instances';
@@ -278,6 +286,7 @@ class AuthController extends GetxController {
       final sanitizedUrl = AppUtils.sanitizeUrl(baseUrl);
 
       _apiService.configure(sanitizedUrl, apiKey);
+      _apiService.disableMockMode();
 
       final connected = await _apiService.testConnection();
       if (!connected) {
@@ -318,6 +327,12 @@ class AuthController extends GetxController {
 
     _configureApi(instance);
 
+    if (instance.name == "n8n Demo") {
+      _apiService.enableMockMode();
+    } else {
+      _apiService.disableMockMode();
+    }
+
     Get.offAllNamed(AppRoutes.home);
   }
 
@@ -348,6 +363,7 @@ class AuthController extends GetxController {
     activeInstance.value = null;
 
     _apiService.configure('', '');
+    _apiService.disableMockMode();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_logged_in', false);
@@ -375,6 +391,7 @@ class AuthController extends GetxController {
     await prefs.setBool('is_logged_in', false);
 
     _apiService.configure('', '');
+    _apiService.disableMockMode();
 
     Get.offAllNamed(AppRoutes.login);
   }

@@ -117,6 +117,66 @@ class MockData {
           "workflowName": "Customer Onboarding"
         }
       ]
+    },
+    "tags_response": {
+      "data": [
+        { "id": "tag-1", "name": "Reporting" },
+        { "id": "tag-2", "name": "Email" },
+        { "id": "tag-3", "name": "Slack" },
+        { "id": "tag-4", "name": "Webhook" },
+        { "id": "tag-5", "name": "DevOps" },
+        { "id": "tag-6", "name": "CRM" },
+        { "id": "tag-7", "name": "Backup" }
+      ]
+    },
+    "credentials_response": {
+      "data": [
+        {
+          "id": "cred-1",
+          "name": "Gmail Account",
+          "type": "gmail",
+          "isManaged": true,
+          "scopes": ["credential:update", "credential:delete"],
+          "createdAt": "2024-03-28T08:00:00.000Z",
+          "updatedAt": "2024-03-28T08:00:00.000Z"
+        },
+        {
+          "id": "cred-2",
+          "name": "Team Slack",
+          "type": "slack",
+          "isManaged": false,
+          "scopes": ["credential:update", "credential:delete"],
+          "createdAt": "2024-03-25T10:30:00.000Z",
+          "updatedAt": "2024-03-25T10:30:00.000Z"
+        },
+        {
+          "id": "cred-3",
+          "name": "PostgreSQL Production",
+          "type": "postgres",
+          "isManaged": false,
+          "scopes": ["credential:update", "credential:delete"],
+          "createdAt": "2024-03-20T09:15:00.000Z",
+          "updatedAt": "2024-03-20T09:15:00.000Z"
+        },
+        {
+          "id": "cred-4",
+          "name": "GitHub OAuth",
+          "type": "github",
+          "isManaged": false,
+          "scopes": ["credential:update", "credential:delete"],
+          "createdAt": "2024-03-15T14:00:00.000Z",
+          "updatedAt": "2024-03-15T14:00:00.000Z"
+        },
+        {
+          "id": "cred-5",
+          "name": "Stripe Live",
+          "type": "stripe",
+          "isManaged": false,
+          "scopes": ["credential:update", "credential:delete"],
+          "createdAt": "2024-03-10T11:45:00.000Z",
+          "updatedAt": "2024-03-10T11:45:00.000Z"
+        }
+      ]
     }
   };
 }

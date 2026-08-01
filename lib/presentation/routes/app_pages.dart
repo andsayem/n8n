@@ -4,6 +4,7 @@ import '../../core/constants/app_constants.dart';
 import '../screens/execution_screens.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/subscription_screen.dart';
 import '../screens/workflow_detail_screen.dart';
 
 class AppPages {
@@ -30,6 +31,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.executionDetail,
       page: () => const ExecutionDetailScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.subscription,
+      page: () => const SubscriptionScreen(),
       transition: Transition.rightToLeft,
     ),
   ];
