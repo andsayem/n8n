@@ -14,6 +14,7 @@ import '../../core/utils/app_utils.dart';
 import '../../data/models/execution_model.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/dashboard_controller.dart';
+import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -123,7 +124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final width = MediaQuery.of(context).size.width.toInt();
 
       final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width - 50, height: 220),
+        size: AdSize(width: width, height: 100),
       );
 
       if (!mounted) return;
@@ -152,9 +153,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              floating: true,
+              pinned: true,
               title: const Text('Dashboard'),
-              snap: true,
               actions: [
                 // ✅ Remove Ads button (only shows when not subscribed)
                 Obx(() {
@@ -191,13 +191,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _buildChartSection(context, stats),
                     const SizedBox(height: 8),
                     // ✅ Banner ad (only shows if loaded — skipped when subscribed)
-                    if (_bannerAd != null)
-                      SizedBox(
-                        width: double.infinity,
-                        height: _bannerAd!.size.height.toDouble(),
-                        child: AdWidget(ad: _bannerAd!),
-                      ),
-                    const SizedBox(height: 10),
+                    BannerAdView(ad: _bannerAd),
+                    //const SizedBox(height: 10),
                     _buildStatsGrid(context, stats),
                     const SizedBox(height: 10),
                     _buildSectionHeader(context, 'Recent Executions'),
@@ -271,9 +266,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildChartSection(BuildContext context, stats) {
-    if (stats.totalExecutionsToday == 0 && stats.failedExecutions == 0) {
+    if (stats.totalWorkflows == 0 &&
+        stats.activeWorkflows == 0 &&
+        stats.failedExecutions == 0 &&
+        stats.totalExecutionsToday == 0) {
       return const SizedBox.shrink();
     }
+
+    final maxValue = [
+      stats.totalWorkflows,
+      stats.activeWorkflows,
+      stats.failedExecutions,
+      stats.totalExecutionsToday,
+    ].reduce((a, b) => a > b ? a : b);
+    final maxY = (maxValue + 2).toDouble();
+
+    final bars = [
+      (
+        x: 0,
+        value: stats.totalWorkflows.toDouble(),
+        color: AppTheme.primaryColor,
+        label: 'Workflows'
+      ),
+      (
+        x: 1,
+        value: stats.activeWorkflows.toDouble(),
+        color: AppTheme.successColor,
+        label: 'Active'
+      ),
+      (
+        x: 2,
+        value: stats.failedExecutions.toDouble(),
+        color: AppTheme.errorColor,
+        label: 'Failed'
+      ),
+      (
+        x: 3,
+        value: stats.totalExecutionsToday.toDouble(),
+        color: AppTheme.warningColor,
+        label: 'Today'
+      ),
+    ];
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -290,42 +323,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionHeader(context, 'Execution Status Overview'),
-          const SizedBox(height: 10),
+          _buildSectionHeader(context, 'Activity Overview'),
+          const SizedBox(height: 16),
           SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-                sections: [
-                  PieChartSectionData(
-                    color: AppTheme.successColor,
-                    value: stats.totalExecutionsToday > 0
-                        ? stats.totalExecutionsToday.toDouble()
-                        : 1,
-                    title: 'Success\n${stats.totalExecutionsToday}',
-                    radius: 50,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            height: 220,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxY,
+                minY: 0,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    tooltipBgColor: Colors.black87,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final value = rod.toY.round();
+                      return BarTooltipItem(
+                        '$value',
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 32,
+                      interval: maxY / 4,
+                      getTitlesWidget: (value, meta) => Text(
+                        '${value.toInt()}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                     ),
                   ),
-                  PieChartSectionData(
-                    color: AppTheme.errorColor,
-                    value: stats.failedExecutions > 0
-                        ? stats.failedExecutions.toDouble()
-                        : 0.1, // Show a sliver if 0 just for design
-                    title: 'Failed\n${stats.failedExecutions}',
-                    radius: 50,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 34,
+                      getTitlesWidget: (value, meta) {
+                        final bar = bars.asMap()[value.toInt()];
+                        if (bar == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            bar.label,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ],
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: maxY / 4,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: bars
+                    .map(
+                      (bar) => BarChartGroupData(
+                        x: bar.x,
+                        barRods: [
+                          BarChartRodData(
+                            toY: bar.value > 0 ? bar.value : 0.3,
+                            color: bar.color,
+                            width: 18,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(6),
+                            ),
+                            backDrawRodData: BackgroundBarChartRodData(
+                              show: true,
+                              toY: maxY,
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    .toList(),
               ),
             ),
           ),

@@ -32,5 +32,6 @@ class AppRoutes {
   static const String home = '/home';
   static const String workflowDetail = '/workflow-detail';
   static const String executionDetail = '/execution-detail';
+  static const String subscription = '/subscription';
   static const String settings = '/settings';
 }

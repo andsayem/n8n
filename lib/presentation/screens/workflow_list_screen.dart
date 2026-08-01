@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/workflow_model.dart';
 import '../controllers/workflow_controller.dart';
+import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
 
 class WorkflowListScreen extends StatefulWidget {
@@ -75,18 +76,17 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
           SliverAppBar(
             backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
                 Theme.of(context).scaffoldBackgroundColor,
-            floating: true,
-            snap: true,
+            pinned: true,
             title: const Text('Workflows'),
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(100),
+              preferredSize: const Size.fromHeight(112),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: Column(
                   children: [
                     _SearchBar(controller: controller),
                     const SizedBox(height: 10),
-                    _FilterChips(controller: controller),
+                    _FilterTabs(controller: controller),
                   ],
                 ),
               ),
@@ -127,12 +127,7 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
           return Column(
             children: [
               // ✅ Banner ad (only shows if loaded — skipped when subscribed)
-              if (_bannerAd != null)
-                SizedBox(
-                  width: double.infinity,
-                  height: _bannerAd!.size.height.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
+              BannerAdView(ad: _bannerAd),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchWorkflows,
@@ -197,42 +192,62 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-class _FilterChips extends StatelessWidget {
+class _FilterTabs extends StatelessWidget {
   final WorkflowController controller;
 
-  const _FilterChips({required this.controller});
+  const _FilterTabs({required this.controller});
 
   @override
   Widget build(BuildContext context) {
+    const filters = [
+      ('all', 'All'),
+      ('active', 'Active'),
+      ('inactive', 'Inactive'),
+    ];
+
     return Obx(() {
-      final filters = ['all', 'active', 'inactive'];
-      return Row(
-        children: filters
-            .map((f) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(f.capitalize!),
-                    selected: controller.filterStatus.value == f,
-                    onSelected: (_) => controller.setFilter(f),
-                    selectedColor: AppTheme.primaryColor,
-                    labelStyle: TextStyle(
-                      color: controller.filterStatus.value == f
-                          ? Colors.white
-                          : Theme.of(context).textTheme.labelMedium?.color,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    side: BorderSide(
-                      color: controller.filterStatus.value == f
-                          ? AppTheme.primaryColor
-                          : Theme.of(context).dividerColor,
-                    ),
-                    backgroundColor: Theme.of(context).cardColor,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      final selected = controller.filterStatus.value;
+      return Container(
+        height: 44,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Row(
+          children: filters.map((f) {
+            final isSelected = selected == f.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => controller.setFilter(f.$1),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryColor
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                ))
-            .toList(),
+                  child: Center(
+                    child: Text(
+                      f.$2,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : Theme.of(context).textTheme.labelMedium?.color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       );
     });
   }

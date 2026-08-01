@@ -5,8 +5,17 @@ import '../../data/models/workflow_model.dart';
 import '../../data/models/execution_model.dart';
 
 class N8nApiService extends GetxService {
-  late Dio _dio;
-  Dio get dio => _dio;
+  Dio? _dio;
+  Dio get dio => _dio ??= Dio(BaseOptions(
+        baseUrl: _baseUrl,
+        connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
+        receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
+        headers: {
+          AppConstants.apiKeyHeader: _apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ));
   String _baseUrl = '';
   String _apiKey = '';
   bool _isMockMode = false;
@@ -25,7 +34,7 @@ class N8nApiService extends GetxService {
     _baseUrl = baseUrl;
     _apiKey = apiKey;
 
-    _dio = Dio(BaseOptions(
+    final dio = Dio(BaseOptions(
       baseUrl: _baseUrl,
       connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
       receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
@@ -36,17 +45,19 @@ class N8nApiService extends GetxService {
       },
     ));
 
-    _dio.interceptors.add(LogInterceptor(
+    dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
       error: true,
     ));
 
-    _dio.interceptors.add(InterceptorsWrapper(
+    dio.interceptors.add(InterceptorsWrapper(
       onError: (DioException e, ErrorInterceptorHandler handler) {
         handler.next(e);
       },
     ));
+
+    _dio = dio;
   }
 
   Future<List<WorkflowModel>> getWorkflows({
@@ -59,7 +70,7 @@ class N8nApiService extends GetxService {
       if (limit != null) queryParams['limit'] = limit;
       if (active != null) queryParams['active'] = active;
 
-      final response = await _dio.get(
+      final response = await dio.get(
         AppConstants.workflowsEndpoint,
         queryParameters: queryParams,
       );
@@ -83,7 +94,7 @@ class N8nApiService extends GetxService {
 
   Future<WorkflowModel> getWorkflow(String id) async {
     try {
-      final response = await _dio.get('${AppConstants.workflowsEndpoint}/$id');
+      final response = await dio.get('${AppConstants.workflowsEndpoint}/$id');
       return WorkflowModel.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -104,7 +115,7 @@ class N8nApiService extends GetxService {
       if (status != null) queryParams['status'] = status;
       if (limit != null) queryParams['limit'] = limit;
 
-      final response = await _dio.get(
+      final response = await dio.get(
         AppConstants.executionsEndpoint,
         queryParameters: queryParams,
       );
@@ -128,7 +139,7 @@ class N8nApiService extends GetxService {
 
   Future<ExecutionModel> getExecution(String id) async {
     try {
-      final response = await _dio.get(
+      final response = await dio.get(
         '${AppConstants.executionsEndpoint}/$id',
         queryParameters: {'includeData': true},
       );
@@ -140,7 +151,7 @@ class N8nApiService extends GetxService {
 
   Future<bool> activateWorkflow(String id) async {
     try {
-      await _dio.post(
+      await dio.post(
           '${AppConstants.workflowsEndpoint}/$id${AppConstants.activateEndpoint}');
       return true;
     } on DioException catch (e) {
@@ -150,7 +161,7 @@ class N8nApiService extends GetxService {
 
   Future<bool> deactivateWorkflow(String id) async {
     try {
-      await _dio.post(
+      await dio.post(
           '${AppConstants.workflowsEndpoint}/$id${AppConstants.deactivateEndpoint}');
       return true;
     } on DioException catch (e) {
@@ -161,7 +172,7 @@ class N8nApiService extends GetxService {
   Future<Map<String, dynamic>> runWorkflow(String id,
       {Map<String, dynamic>? data}) async {
     try {
-      final response = await _dio.post(
+      final response = await dio.post(
         '${AppConstants.workflowsEndpoint}/$id${AppConstants.runEndpoint}',
         data: data ?? {},
       );
@@ -173,8 +184,9 @@ class N8nApiService extends GetxService {
 
   Future<bool> testConnection() async {
     try {
-      await _dio
-          .get(AppConstants.workflowsEndpoint, queryParameters: {'limit': 1});
+      await dio.get(
+          AppConstants.workflowsEndpoint,
+          queryParameters: {'limit': 1});
       return true;
     } catch (_) {
       return false;

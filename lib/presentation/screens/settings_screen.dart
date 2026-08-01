@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
@@ -14,8 +13,9 @@ import '../../data/models/instance_model.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../controllers/purchase_controller.dart';
-import '../../settings/purchase_dialog.dart';
+import '../widgets/banner_ad_view.dart';
 import 'login_screen.dart';
+import 'subscription_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -93,8 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: CustomScrollView(
         slivers: [
           const SliverAppBar(
-            floating: true,
-            snap: true,
+            pinned: true,
             title: Text('Settings'),
           ),
           SliverPadding(
@@ -135,6 +134,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ]),
                 const SizedBox(height: 20),
+                // ── Subscription ─────────────────────────────────────────
+                Obx(() {
+                  final pc = Get.find<PurchaseController>();
+                  if (pc.adsRemoved.value) return const SizedBox.shrink();
+                  return Column(
+                    children: [
+                      _buildSection(context, 'Subscription', [
+                        _ActionTile(
+                          title: 'Remove Ads',
+                          subtitle: 'Subscribe to enjoy ad-free experience',
+                          icon: Icons.workspace_premium_rounded,
+                          iconColor: AppTheme.warningColor,
+                          onTap: () => Get.to(() => const SubscriptionScreen()),
+                        ),
+                      ]),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                }),
 
                 // ── Manage (Tags & Credentials) ────────────────────────────
                 _buildSection(context, 'Manage', [
@@ -157,12 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
 
                 const SizedBox(height: 20),
-                if (_bannerAd != null)
-                  SizedBox(
-                    width: double.infinity,
-                    height: _bannerAd!.size.height.toDouble(),
-                    child: AdWidget(ad: _bannerAd!),
-                  ),
+                BannerAdView(ad: _bannerAd),
                 const SizedBox(height: 20),
 
                 // ── Appearance ───────────────────────────────────────────
@@ -259,27 +272,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ]),
                 const SizedBox(height: 20),
 
-                // ── Subscription ─────────────────────────────────────────
-                Obx(() {
-                  final pc = Get.find<PurchaseController>();
-                  if (pc.adsRemoved.value) return const SizedBox.shrink();
-                  return Column(
-                    children: [
-                      _buildSection(context, 'Subscription', [
-                        _ActionTile(
-                          title: 'Remove Ads',
-                          subtitle: 'Subscribe to enjoy ad-free experience',
-                          icon: Icons.workspace_premium_rounded,
-                          iconColor: AppTheme.warningColor,
-                          onTap: () =>
-                              showPurchasePopup(showPreferenceButtons: false),
-                        ),
-                      ]),
-                      const SizedBox(height: 20),
-                    ],
-                  );
-                }),
-
                 // ── Account ──────────────────────────────────────────────
 
                 _buildSection(context, 'Account', [
@@ -334,7 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ],
-    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
+    );
   }
 
   // ── Feature actions ────────────────────────────────────────────────────────

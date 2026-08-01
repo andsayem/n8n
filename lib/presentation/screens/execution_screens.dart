@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/execution_model.dart';
 import '../controllers/execution_controller.dart';
+import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
 
 // ─── Execution List ──────────────────────────────────────────────────────────
@@ -74,14 +75,21 @@ class _ExecutionListScreenState extends State<ExecutionListScreen> {
       body: NestedScrollView(
         headerSliverBuilder: (context, _) => [
           SliverAppBar(
-            floating: true,
-            snap: true,
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+                Theme.of(context).scaffoldBackgroundColor,
+            pinned: true,
             title: const Text('Executions'),
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(52),
+              preferredSize: const Size.fromHeight(112),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: _FilterRow(controller: controller),
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
+                  children: [
+                    _SearchBar(controller: controller),
+                    const SizedBox(height: 10),
+                    _FilterTabs(controller: controller),
+                  ],
+                ),
               ),
             ),
           ),
@@ -105,32 +113,31 @@ class _ExecutionListScreenState extends State<ExecutionListScreen> {
             );
           }
 
-          if (controller.executions.isEmpty) {
-            return const EmptyStateWidget(
-              title: 'No Executions',
-              subtitle: 'Run a workflow to see executions here.',
+          if (controller.filteredExecutions.isEmpty) {
+            return EmptyStateWidget(
+              title: controller.searchQuery.value.isNotEmpty
+                  ? 'No Results Found'
+                  : 'No Executions',
+              subtitle: controller.searchQuery.value.isNotEmpty
+                  ? 'Try a different search term.'
+                  : 'Run a workflow to see executions here.',
               icon: Icons.history_rounded,
             );
           }
 
           return Column(
             children: [
-              if (_bannerAd != null)
-                SizedBox(
-                  width: double.infinity,
-                  height: _bannerAd!.size.height.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
+              BannerAdView(ad: _bannerAd),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchExecutions,
                   color: AppTheme.primaryColor,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: controller.executions.length,
+                    itemCount: controller.filteredExecutions.length,
                     itemBuilder: (context, i) {
                       return _ExecutionCard(
-                        execution: controller.executions[i],
+                        execution: controller.filteredExecutions[i],
                         index: i,
                       );
                     },
@@ -145,45 +152,105 @@ class _ExecutionListScreenState extends State<ExecutionListScreen> {
   }
 }
 
-class _FilterRow extends StatelessWidget {
+class _SearchBar extends StatelessWidget {
   final ExecutionController controller;
 
-  const _FilterRow({required this.controller});
+  const _SearchBar({required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    final filters = ['all', 'success', 'error', 'running'];
-    return Obx(() => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: filters
-                .map((f) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(f.capitalize!),
-                        selected: controller.filterStatus.value == f,
-                        onSelected: (_) => controller.setFilter(f),
-                        selectedColor:
-                            AppUtils.statusColor(f == 'all' ? 'running' : f),
-                        labelStyle: TextStyle(
-                          color: controller.filterStatus.value == f
-                              ? Colors.white
-                              : Theme.of(context).textTheme.labelMedium?.color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        side: BorderSide(
-                          color: controller.filterStatus.value == f
-                              ? AppUtils.statusColor(f == 'all' ? 'running' : f)
-                              : AppTheme.darkBorder,
-                        ),
-                        backgroundColor: Theme.of(context).cardColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
+    return TextField(
+      onChanged: controller.setSearch,
+      decoration: InputDecoration(
+        hintText: 'Search executions...',
+        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        isDense: true,
+        filled: true,
+        fillColor: Theme.of(context).cardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppTheme.primaryColor),
+        ),
+        suffixIcon: Obx(() => controller.searchQuery.value.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear_rounded, size: 18),
+                onPressed: () => controller.setSearch(''),
+              )
+            : const SizedBox.shrink()),
+      ),
+    );
+  }
+}
+
+class _FilterTabs extends StatelessWidget {
+  final ExecutionController controller;
+
+  const _FilterTabs({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    const filters = [
+      ('all', 'All'),
+      ('success', 'Success'),
+      ('error', 'Error'),
+      ('running', 'Running'),
+    ];
+
+    return Obx(() {
+      final selected = controller.filterStatus.value;
+      return Container(
+        height: 44,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Row(
+          children: filters.map((f) {
+            final isSelected = selected == f.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => controller.setFilter(f.$1),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.primaryColor
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Center(
+                    child: Text(
+                      f.$2,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : Theme.of(context).textTheme.labelMedium?.color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ))
-                .toList(),
-          ),
-        ));
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    });
   }
 }
 
@@ -201,11 +268,11 @@ class _ExecutionCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Get.toNamed(AppRoutes.executionDetail, arguments: execution),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
           ),
@@ -213,14 +280,14 @@ class _ExecutionCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
+                color: statusColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(AppUtils.statusIcon(execution.status),
-                  color: statusColor, size: 20),
+                  color: statusColor, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -230,13 +297,13 @@ class _ExecutionCard extends StatelessWidget {
                   Text(
                     execution.workflowName ?? 'Unknown Workflow',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Text(
@@ -272,7 +339,7 @@ class _ExecutionCard extends StatelessWidget {
     )
         .animate(delay: Duration(milliseconds: index * 40))
         .fadeIn(duration: 300.ms)
-        .slideX(begin: 0.1, end: 0);
+        .slideY(begin: 0.15, end: 0);
   }
 }
 

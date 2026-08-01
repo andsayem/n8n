@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:n8n_manager/core/utils/app_colors.dart';
-import 'package:n8n_manager/core/utils/custom_textformfield.dart';
-import 'package:n8n_manager/core/utils/customtext.dart';
+import 'package:n8n_manager/core/theme/app_theme.dart';
+import 'package:n8n_manager/core/utils/app_utils.dart';
 import 'package:n8n_manager/core/widgets/banner_ad_widget.dart';
+import 'package:n8n_manager/presentation/widgets/common_widgets.dart';
+import 'execution_model.dart';
 import 'executions_viewmodel.dart';
 
 class ExecutionsListScreen extends ConsumerStatefulWidget {
@@ -16,10 +18,10 @@ class ExecutionsListScreen extends ConsumerStatefulWidget {
 
 class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
   final _scrollController = ScrollController();
-  String _filter = 'all';
-  bool _isLoadingMore = false;
   final TextEditingController _searchController = TextEditingController();
+  String _filter = 'all';
   String _search = '';
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
@@ -58,15 +60,34 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
     super.dispose();
   }
 
-  void _showDetails(BuildContext context, item) {
+  bool _matches(ExecutionModel i) {
+    final s = i.status.toLowerCase();
+
+    if (_filter == 'success' && !s.contains('success')) return false;
+    if (_filter == 'error' && !(s.contains('error') || s.contains('fail'))) {
+      return false;
+    }
+
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      if (!i.id.toLowerCase().contains(q) && !s.contains(q)) return false;
+    }
+
+    return true;
+  }
+
+  void _showDetails(BuildContext context, ExecutionModel item) {
     final resultData = item.data?['resultData'];
     final error = resultData?['error'];
     final message = error?['message'];
     final stack = error?['stack'];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).cardColor,
         title: Text('Execution ${item.id}'),
         content: SingleChildScrollView(
           child: Column(
@@ -81,8 +102,8 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
                 const SizedBox(height: 8),
               ],
               Text('Status: ${item.status}'),
-              Text('Started: ${item.startedAt}'),
-              Text('Finished: ${item.finishedAt ?? '—'}'),
+              Text('Started: ${AppUtils.formatDate(item.startedAt.toIso8601String())}'),
+              Text('Finished: ${item.finishedAt != null ? AppUtils.formatDate(item.finishedAt!.toIso8601String()) : '—'}'),
               if (item.finishedAt != null)
                 Text(
                   'Duration: ${item.finishedAt!.difference(item.startedAt)}',
@@ -110,10 +131,11 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(4),
+                    color: isDark ? AppTheme.darkCard : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     stack.toString(),
@@ -133,8 +155,8 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
           if (item.status.toLowerCase().contains('fail'))
             TextButton(
               onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                Navigator.of(context).pop();
+                final messenger = ScaffoldMessenger.of(dialogContext);
+                Navigator.of(dialogContext).pop();
                 try {
                   await ref
                       .read(executionsViewModelProvider.notifier)
@@ -151,7 +173,7 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
               child: const Text('Retry'),
             ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Close'),
           ),
         ],
@@ -162,185 +184,323 @@ class _ExecutionsListScreenState extends ConsumerState<ExecutionsListScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(executionsViewModelProvider);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const CustomText(
-          text: 'Executions',
-          fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary,
-        ),
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: AppColors.backgroundLight,
-      ),
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       bottomNavigationBar: const BannerAdWidget(),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                CustomInputField(
-                  hintText: "Search executions by id or status",
-                  prefixIcon: Icons.search,
-                  textController: _searchController,
-                ),
-                const SizedBox(width: 16.0),
-                Row(
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar(
+            backgroundColor: Theme.of(context).appBarTheme.backgroundColor ??
+                Theme.of(context).scaffoldBackgroundColor,
+            pinned: true,
+            title: const Text('Executions'),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(112),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
                   children: [
-                    const CustomText(text: 'Filter:'),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('All'),
-                      selected: _filter == 'all',
-                      onSelected: (v) {
-                        setState(() {
-                          _filter = 'all';
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('Success'),
-                      selected: _filter == 'success',
-                      onSelected: (v) {
-                        setState(() {
-                          _filter = 'success';
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('Error'),
-                      selected: _filter == 'error',
-                      onSelected: (v) {
-                        setState(() {
-                          _filter = 'error';
-                        });
-                      },
+                    _SearchBar(controller: _searchController),
+                    const SizedBox(height: 10),
+                    _FilterTabs(
+                      selected: _filter,
+                      onChanged: (v) => setState(() => _filter = v),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: state.when(
-              data: (items) {
-                final filtered = items.where((i) {
-                  // chip filter
-                  if (_filter == 'success' &&
-                      !i.status.toLowerCase().contains('success')) {
-                    return false;
-                  }
-                  if (_filter == 'error' &&
-                      !i.status.toLowerCase().contains('error')) {
-                    return false;
-                  }
-
-                  // search filter (id or status)
-                  if (_search.isNotEmpty) {
-                    final s = _search.toLowerCase();
-                    final id = i.id.toLowerCase();
-                    final status = i.status.toLowerCase();
-                    if (!id.contains(s) && !status.contains(s)) return false;
-                  }
-
-                  return true;
-                }).toList();
-
-                if (filtered.isEmpty) {
-                  return const Center(child: Text('No executions'));
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(executionsViewModelProvider.notifier).refresh(),
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: filtered.length + 1, // extra for loader
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, idx) {
-                      if (idx == filtered.length) {
-                        // bottom loader
-                        // show only when we suspect more items exist (simple heuristic)
-                        final showLoader =
-                            filtered.isNotEmpty && filtered.length % 25 == 0;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: Center(
-                            child: showLoader
-                                ? const CircularProgressIndicator()
-                                : const SizedBox.shrink(),
-                          ),
-                        );
-                      }
-
-                      final it = filtered[idx];
-
-                      // status color
-                      Color statusColor = Colors.grey;
-                      final s = it.status.toLowerCase();
-                      if (s.contains('success')) {
-                        statusColor = Colors.green;
-                      } else if (s.contains('error') ||
-                          s.contains('failed') ||
-                          s.contains('fail'))
-                        // ignore: curly_braces_in_flow_control_structures
-                        statusColor = Colors.red;
-                      else if (s.contains('running'))
-                        // ignore: curly_braces_in_flow_control_structures
-                        statusColor = Colors.orange;
-
-                      String subtitleText() {
-                        final started = it.startedAt;
-                        final startedStr = TimeOfDay.fromDateTime(
-                          started,
-                        ).format(context);
-                        final ago = _relativeTime(started);
-                        return '${it.status} • $startedStr $ago';
-                      }
-
-                      return ListTile(
-                        leading: CircleAvatar(
-                          radius: 6,
-                          backgroundColor: statusColor,
-                        ),
-                        title: Text(
-                          it.workflowName ?? 'Execution ${it.id}',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                        subtitle: Text(
-                          'ID: ${it.id} • ${subtitleText()}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.info_outline),
-                          onPressed: () => _showDetails(context, it),
-                        ),
-                        onTap: () => _showDetails(context, it),
-                      );
-                    },
-                  ),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => Center(child: Text('Error: $e')),
+              ),
             ),
           ),
         ],
+        body: state.when(
+          loading: () => ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 6,
+            itemBuilder: (_, __) => const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: CardSkeletonLoader(),
+            ),
+          ),
+          error: (e, _) => ErrorRetryWidget(
+            message: '$e',
+            onRetry: () =>
+                ref.read(executionsViewModelProvider.notifier).refresh(),
+          ),
+          data: (items) {
+            final filtered = items.where(_matches).toList();
+
+            if (filtered.isEmpty) {
+              return EmptyStateWidget(
+                title: _search.isNotEmpty ? 'No Results Found' : 'No Executions',
+                subtitle: _search.isNotEmpty
+                    ? 'Try a different search term.'
+                    : 'No executions found yet.',
+                icon: Icons.playlist_remove_rounded,
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(executionsViewModelProvider.notifier).refresh(),
+              color: AppTheme.primaryColor,
+              child: ListView.builder(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: filtered.length + 1,
+                itemBuilder: (context, idx) {
+                  if (idx == filtered.length) {
+                    final showLoader =
+                        filtered.isNotEmpty && filtered.length % 25 == 0;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: showLoader
+                            ? const CircularProgressIndicator()
+                            : const SizedBox.shrink(),
+                      ),
+                    );
+                  }
+
+                  final it = filtered[idx];
+                  return _ExecutionCard(
+                    execution: it,
+                    index: idx,
+                    onTap: () => _showDetails(context, it),
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
+}
 
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return '(now)';
-    if (diff.inMinutes < 60) return '(${diff.inMinutes}m ago)';
-    if (diff.inHours < 24) return '(${diff.inHours}h ago)';
-    return '(${diff.inDays}d ago)';
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _SearchBar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: 'Search executions...',
+        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        isDense: true,
+        filled: true,
+        fillColor: Theme.of(context).cardColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppTheme.primaryColor),
+        ),
+        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (_, value, __) => value.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded, size: 18),
+                  onPressed: () => controller.clear(),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ),
+    );
   }
+}
+
+class _FilterTabs extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  const _FilterTabs({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    const filters = [
+      ('all', 'All'),
+      ('success', 'Success'),
+      ('error', 'Error'),
+    ];
+
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Row(
+        children: filters.map((f) {
+          final isSelected = selected == f.$1;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(f.$1),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.primaryColor
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Center(
+                  child: Text(
+                    f.$2,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(context).textTheme.labelMedium?.color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _ExecutionCard extends StatelessWidget {
+  final ExecutionModel execution;
+  final int index;
+  final VoidCallback onTap;
+
+  const _ExecutionCard({
+    required this.execution,
+    required this.index,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = AppUtils.statusColor(execution.status);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    AppUtils.statusIcon(execution.status),
+                    size: 18,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    execution.workflowName ?? 'Execution ${execution.id}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                StatusBadge(status: execution.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _InfoChip(
+                    icon: Icons.tag_rounded,
+                    label: 'ID ${execution.id}',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: _InfoChip(
+                    icon: Icons.schedule_rounded,
+                    label: _relativeTime(execution.startedAt),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate(delay: Duration(milliseconds: index * 50))
+        .fadeIn(duration: 350.ms)
+        .slideY(begin: 0.15, end: 0);
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon,
+            size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _relativeTime(DateTime dt) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
 }

@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
+import 'package:n8n_manager/presentation/widgets/banner_ad_view.dart';
 import '../controllers/tag_controller.dart';
 import '../../../data/models/n8n_tag_model.dart';
 import 'tag_form_screen.dart';
 
-class TagListScreen extends StatelessWidget {
+class TagListScreen extends StatefulWidget {
   const TagListScreen({super.key});
+
+  @override
+  State<TagListScreen> createState() => _TagListScreenState();
+}
+
+class _TagListScreenState extends State<TagListScreen> {
+  BannerAd? _bannerAd;
 
   static const _black = Color(0xFF18181B);
   static const _zinc500 = Color(0xFF71717A);
@@ -14,6 +25,54 @@ class TagListScreen extends StatelessWidget {
   static const _orange = Color(0xFFEA580C);
   static const _orangeTint = Color(0xFFFFF4EE);
   static const _orangeBorder = Color(0xFFFFD9C2);
+
+  @override
+  void initState() {
+    super.initState();
+    _initAdd();
+  }
+
+  Future<void> _initAdd() async {
+    try {
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+    } catch (_) {}
+
+    AdmobHelper.loadInterstitialAd();
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    try {
+      final purchaseCtrl = Get.find<PurchaseController>();
+      if (purchaseCtrl.adsRemoved.value) return;
+
+      final width = MediaQuery.of(context).size.width.toInt();
+
+      final ad = await AdmobHelper.loadBannerAd(
+        size: AdSize(width: width - 50, height: 220),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _bannerAd = ad;
+      });
+    } catch (e) {
+      debugPrint("Banner load error: $e");
+
+      setState(() {
+        _bannerAd = null;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,38 +108,46 @@ class TagListScreen extends StatelessWidget {
         elevation: 0,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(
-              child: CircularProgressIndicator(color: _orange, strokeWidth: 2));
-        }
-        if (controller.errorMessage.value.isNotEmpty) {
-          return _buildError(controller);
-        }
-        if (controller.tags.isEmpty) {
-          return _buildEmpty();
-        }
-        return RefreshIndicator(
-          color: _orange,
-          onRefresh: controller.loadTags,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: controller.tags.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final tag = controller.tags[index];
-              return _TagCard(
-                tag: tag,
-                onEdit: () => Get.to(() => TagFormScreen(existingTag: tag)),
-                onDelete: () => _confirmDelete(context, controller, tag),
-              )
-                  .animate()
-                  .fadeIn(delay: (index * 40).ms, duration: 300.ms)
-                  .slideY(begin: 0.1, end: 0);
-            },
+      body: Column(
+        children: [
+          BannerAdView(ad: _bannerAd),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(
+                    child:
+                        CircularProgressIndicator(color: _orange, strokeWidth: 2));
+              }
+              if (controller.errorMessage.value.isNotEmpty) {
+                return _buildError(controller);
+              }
+              if (controller.tags.isEmpty) {
+                return _buildEmpty();
+              }
+              return RefreshIndicator(
+                color: _orange,
+                onRefresh: controller.loadTags,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: controller.tags.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final tag = controller.tags[index];
+                    return _TagCard(
+                      tag: tag,
+                      onEdit: () => Get.to(() => TagFormScreen(existingTag: tag)),
+                      onDelete: () => _confirmDelete(context, controller, tag),
+                    )
+                        .animate()
+                        .fadeIn(delay: (index * 40).ms, duration: 300.ms)
+                        .slideY(begin: 0.1, end: 0);
+                  },
+                ),
+              );
+            }),
           ),
-        );
-      }),
+        ],
+      ),
     );
   }
 
