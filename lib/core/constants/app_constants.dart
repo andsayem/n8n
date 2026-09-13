@@ -7,6 +7,8 @@ class AppConstants {
   static const String activeInstanceKey = 'active_instance';
   static const String themeKey = 'app_theme';
   static const String apiKeyPrefix = 'api_key_';
+  static const String auditLogKey = 'n8n_audit_log';
+  static const int auditLogLimit = 300;
 
   // API
   static const int connectTimeout = 15000;
@@ -20,6 +22,8 @@ class AppConstants {
   static const String deactivateEndpoint = '/deactivate';
   static const String runEndpoint = '/run';
   static const String credentialsEndpoint = '/api/v1/credentials';
+  static const String projectsEndpoint = '/api/v1/projects';
+  static const String foldersEndpoint = '/api/v1/folders';
 
   // Pagination
   static const int pageSize = 20;
@@ -34,4 +38,6 @@ class AppRoutes {
   static const String executionDetail = '/execution-detail';
   static const String subscription = '/subscription';
   static const String settings = '/settings';
+  static const String folders = '/folders';
+  static const String activity = '/activity';
 }

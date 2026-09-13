@@ -14,6 +14,8 @@ import 'services/n8n_api_service.dart';
 import 'core/services/purchase_service.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:upgrader/upgrader.dart';
+import 'audit/data/services/audit_log_service.dart';
+import 'folders/modules/folders/controllers/folder_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,11 +35,13 @@ void main() async {
 
   // Init services
   await Get.putAsync<InstanceService>(() => InstanceService().init());
+  await Get.putAsync<AuditLogService>(() => AuditLogService().init());
   Get.put<N8nApiService>(N8nApiService());
 
   // Init controllers
   Get.put<AuthController>(AuthController());
   Get.put<ThemeController>(ThemeController());
+  Get.lazyPut(() => FolderController());
   final adHelper = AdmobHelper();
   // lifecycle observer
   WidgetsBinding.instance.addObserver(adHelper);

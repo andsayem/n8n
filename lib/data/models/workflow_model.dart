@@ -6,7 +6,10 @@ class WorkflowModel {
   final DateTime updatedAt;
   final List<String> tags;
   final List<dynamic> nodes;
+  final Map<String, dynamic>? connections;
   final Map<String, dynamic>? settings;
+  final String? description;
+  final String? parentFolderId;
   final String? lastExecutionStatus;
   final String? lastExecutionAt;
 
@@ -18,7 +21,10 @@ class WorkflowModel {
     required this.updatedAt,
     this.tags = const [],
     this.nodes = const [],
+    this.connections,
     this.settings,
+    this.description,
+    this.parentFolderId,
     this.lastExecutionStatus,
     this.lastExecutionAt,
   });
@@ -40,7 +46,10 @@ class WorkflowModel {
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.now(),
       tags: parsedTags,
       nodes: json['nodes'] as List<dynamic>? ?? [],
+      connections: json['connections'] as Map<String, dynamic>?,
       settings: json['settings'] as Map<String, dynamic>?,
+      description: json['description'] as String?,
+      parentFolderId: (json['parentFolderId'] ?? json['folderId'])?.toString(),
       lastExecutionStatus: json['lastExecutionStatus'] as String?,
       lastExecutionAt: json['lastExecutionAt'] as String?,
     );
@@ -54,7 +63,10 @@ class WorkflowModel {
         'updatedAt': updatedAt.toIso8601String(),
         'tags': tags,
         'nodes': nodes,
+        'connections': connections,
         'settings': settings,
+        'description': description,
+        'parentFolderId': parentFolderId,
         'lastExecutionStatus': lastExecutionStatus,
         'lastExecutionAt': lastExecutionAt,
       };
@@ -69,7 +81,10 @@ class WorkflowModel {
     DateTime? updatedAt,
     List<String>? tags,
     List<dynamic>? nodes,
+    Map<String, dynamic>? connections,
     Map<String, dynamic>? settings,
+    String? description,
+    String? parentFolderId,
     String? lastExecutionStatus,
     String? lastExecutionAt,
   }) {
@@ -81,7 +96,10 @@ class WorkflowModel {
       updatedAt: updatedAt ?? this.updatedAt,
       tags: tags ?? this.tags,
       nodes: nodes ?? this.nodes,
+      connections: connections ?? this.connections,
       settings: settings ?? this.settings,
+      description: description ?? this.description,
+      parentFolderId: parentFolderId ?? this.parentFolderId,
       lastExecutionStatus:
           lastExecutionStatus ?? this.lastExecutionStatus,
       lastExecutionAt: lastExecutionAt ?? this.lastExecutionAt,

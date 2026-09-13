@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:n8n_manager/audit/modules/activity/views/activity_screen.dart';
+import 'package:n8n_manager/folders/modules/folders/views/folder_list_screen.dart';
 import 'package:n8n_manager/presentation/screens/splash_screen.dart';
 import '../../core/constants/app_constants.dart';
 import '../screens/execution_screens.dart';
@@ -36,6 +38,16 @@ class AppPages {
     GetPage(
       name: AppRoutes.subscription,
       page: () => const SubscriptionScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.folders,
+      page: () => const FolderListScreen(),
+      transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.activity,
+      page: () => const ActivityScreen(),
       transition: Transition.rightToLeft,
     ),
   ];

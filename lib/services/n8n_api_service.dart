@@ -101,6 +101,33 @@ class N8nApiService extends GetxService {
     }
   }
 
+  Future<WorkflowModel> updateWorkflow(
+    String id, {
+    String? parentFolderId,
+  }) async {
+    try {
+      final existing = await getWorkflow(id);
+
+      final payload = <String, dynamic>{
+        'name': existing.name,
+        'nodes': existing.nodes,
+        'connections': existing.connections ?? <String, dynamic>{},
+        'settings': existing.settings ?? <String, dynamic>{},
+      };
+      if (parentFolderId != null) {
+        payload['parentFolderId'] = parentFolderId;
+      }
+
+      final response = await dio.put(
+        '${AppConstants.workflowsEndpoint}/$id',
+        data: payload,
+      );
+      return WorkflowModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<List<ExecutionModel>> getExecutions({
     String? workflowId,
     String? status,

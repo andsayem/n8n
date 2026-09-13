@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:n8n_manager/audit/data/models/audit_entry.dart';
+import 'package:n8n_manager/audit/data/services/audit_log_service.dart';
 import '../../data/models/data_table_model.dart';
 import '../../services/data_table_service.dart';
 
@@ -53,8 +55,19 @@ class DataTableListController extends GetxController {
 
   Future<void> deleteTable(String id) async {
     try {
+      final name =
+          tables.firstWhereOrNull((t) => t.id == id)?.name ?? id;
       await _svc.deleteTable(id);
       tables.removeWhere((t) => t.id == id);
+
+      if (Get.isRegistered<AuditLogService>()) {
+        Get.find<AuditLogService>().log(
+          action: AuditAction.deleted,
+          targetType: AuditTarget.table,
+          targetName: name,
+        );
+      }
+
       Get.snackbar(
         'Deleted',
         'Table removed successfully',
@@ -217,6 +230,15 @@ class DataTableDetailController extends GetxController {
         ),
       );
       _applyFilter();
+
+      if (Get.isRegistered<AuditLogService>()) {
+        Get.find<AuditLogService>().log(
+          action: AuditAction.created,
+          targetType: AuditTarget.table,
+          targetName: 'Row in "${table.value?.name ?? 'Table'}"',
+        );
+      }
+
       return true;
     } catch (e) {
       Get.snackbar(
@@ -243,6 +265,15 @@ class DataTableDetailController extends GetxController {
       }
       rows.refresh();
       _applyFilter();
+
+      if (Get.isRegistered<AuditLogService>()) {
+        Get.find<AuditLogService>().log(
+          action: AuditAction.updated,
+          targetType: AuditTarget.table,
+          targetName: 'Row in "${table.value?.name ?? 'Table'}"',
+        );
+      }
+
       return true;
     } catch (e) {
       Get.snackbar(
@@ -261,6 +292,15 @@ class DataTableDetailController extends GetxController {
       await _svc.deleteRow(table.value!.id, rowId);
       rows.removeWhere((r) => r.id == rowId);
       _applyFilter();
+
+      if (Get.isRegistered<AuditLogService>()) {
+        Get.find<AuditLogService>().log(
+          action: AuditAction.deleted,
+          targetType: AuditTarget.table,
+          targetName: 'Row in "${table.value?.name ?? 'Table'}"',
+        );
+      }
+
       Get.snackbar(
         'Deleted',
         'Row removed',
@@ -323,7 +363,15 @@ class DataTableEditController extends GetxController {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      return await _svc.createTable(table);
+      final created = await _svc.createTable(table);
+      if (Get.isRegistered<AuditLogService>()) {
+        Get.find<AuditLogService>().log(
+          action: AuditAction.created,
+          targetType: AuditTarget.table,
+          targetName: created.name,
+        );
+      }
+      return created;
     } catch (e) {
       errorMessage.value = e.toString().replaceFirst('Exception: ', '');
       return null;
@@ -344,7 +392,15 @@ class DataTableEditController extends GetxController {
       original.description = desc.trim();
       original.columns = List.from(columns);
       original.updatedAt = DateTime.now();
-      return await _svc.updateTable(original);
+      final updated = await _svc.updateTable(original);
+      if (Get.isRegistered<AuditLogService>()) {
+        Get.find<AuditLogService>().log(
+          action: AuditAction.updated,
+          targetType: AuditTarget.table,
+          targetName: updated.name,
+        );
+      }
+      return updated;
     } catch (e) {
       errorMessage.value = e.toString().replaceFirst('Exception: ', '');
       return null;
