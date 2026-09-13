@@ -1,248 +1,12 @@
-// import 'package:get/get.dart';
-// import 'package:n8n_manager/data/mock_data.dart';
-// import 'package:n8n_manager/presentation/controllers/auth_controller.dart';
-// import '../../data/models/workflow_model.dart';
-// import '../../services/n8n_api_service.dart';
-
-// class WorkflowController extends GetxController {
-//   final N8nApiService _apiService = Get.find<N8nApiService>();
-
-//   final RxList<WorkflowModel> workflows = <WorkflowModel>[].obs;
-//   final RxList<WorkflowModel> filteredWorkflows = <WorkflowModel>[].obs;
-//   final RxBool isLoading = false.obs;
-//   final RxString errorMessage = ''.obs;
-//   final RxBool hasError = false.obs;
-//   final RxString searchQuery = ''.obs;
-//   final RxString filterStatus = 'all'.obs; // all, active, inactive
-
-//   @override
-//   void onInit() {
-//     super.onInit();
-//     fetchWorkflows();
-//     ever(searchQuery, (_) => _applyFilter());
-//     ever(filterStatus, (_) => _applyFilter());
-//   }
-
-//   Future<void> fetchWorkflows() async {
-//     isLoading.value = true;
-//     hasError.value = false;
-//     errorMessage.value = '';
-
-//     try {
-//       final auth = Get.find<AuthController>();
-
-//       // 🔥 DEMO MODE
-//       if (auth.isDemo) {
-//         final mockList = MockData.data['workflows_response']['data'] as List;
-
-//         workflows.value =
-//             mockList.map((e) => WorkflowModel.fromJson(e)).toList();
-
-//         _applyFilter();
-//         return;
-//       }
-
-//       // ✅ REAL API
-//       final result = await _apiService.getWorkflows(limit: 100);
-//       workflows.value = result;
-//       _applyFilter();
-//     } catch (e) {
-//       hasError.value = true;
-//       errorMessage.value = e.toString().replaceFirst('Exception: ', '');
-//     } finally {
-//       isLoading.value = false;
-//     }
-//   }
-
-//   void _applyFilter() {
-//     var list = List<WorkflowModel>.from(workflows);
-
-//     // ✅ status filter
-//     if (filterStatus.value == 'active') {
-//       list = list.where((w) => w.active).toList();
-//     } else if (filterStatus.value == 'inactive') {
-//       list = list.where((w) => !w.active).toList();
-//     }
-
-//     // ✅ search filter
-//     if (searchQuery.value.isNotEmpty) {
-//       final q = searchQuery.value.toLowerCase();
-//       list = list.where((w) => w.name.toLowerCase().contains(q)).toList();
-//     }
-
-//     filteredWorkflows.value = list;
-//   }
-
-//   void setSearch(String query) => searchQuery.value = query;
-//   void setFilter(String status) => filterStatus.value = status;
-// }
-
-// class WorkflowDetailController extends GetxController {
-//   final N8nApiService _apiService = Get.find<N8nApiService>();
-
-//   final Rxn<WorkflowModel> workflow = Rxn<WorkflowModel>();
-//   final RxBool isLoading = false.obs;
-//   final RxBool isActing = false.obs;
-//   final RxString errorMessage = ''.obs;
-
-//   Future<List<WorkflowModel>> getWorkflows({
-//     int? limit,
-//     int? cursor,
-//     bool? active,
-//   }) async {
-//     try {
-//       // 🔥 MOCK MODE CHECK
-//       if (_isMockMode) {
-//         final mock = await _loadMockData();
-
-//         final list = mock['workflows_response']['data'] as List;
-
-//         return list.map((e) => WorkflowModel.fromJson(e)).toList();
-//       }
-
-//       // 🌐 REAL API
-//       final queryParams = <String, dynamic>{};
-//       if (limit != null) queryParams['limit'] = limit;
-//       if (active != null) queryParams['active'] = active;
-
-//       final response = await _dio.get(
-//         AppConstants.workflowsEndpoint,
-//         queryParameters: queryParams,
-//       );
-
-//       final data = response.data;
-//       List<dynamic> list = [];
-
-//       if (data is Map && data['data'] is List) {
-//         list = data['data'];
-//       } else if (data is List) {
-//         list = data;
-//       }
-
-//       return list.map((e) => WorkflowModel.fromJson(e)).toList();
-//     } on DioException catch (e) {
-//       throw _handleError(e);
-//     }
-//   }
-
-//   Future<void> activate() async {
-//     if (workflow.value == null) return;
-
-//     isActing.value = true;
-
-//     try {
-//       final auth = Get.find<AuthController>();
-
-//       // 🔥 DEMO MODE
-//       if (auth.isDemo) {
-//         workflow.value = workflow.value!.copyWith(active: true);
-
-//         Get.snackbar(
-//           'Success',
-//           'Workflow activated (Demo)',
-//           snackPosition: SnackPosition.BOTTOM,
-//         );
-
-//         return;
-//       }
-
-//       // ✅ REAL API
-//       await _apiService.activateWorkflow(workflow.value!.id);
-
-//       await loadWorkflow(workflow.value!.id);
-
-//       Get.snackbar(
-//         'Success',
-//         'Workflow activated',
-//         snackPosition: SnackPosition.BOTTOM,
-//       );
-//     } catch (e) {
-//       Get.snackbar(
-//         'Error',
-//         e.toString().replaceFirst('Exception: ', ''),
-//         snackPosition: SnackPosition.BOTTOM,
-//       );
-//     } finally {
-//       isActing.value = false;
-//     }
-//   }
-
-//   Future<void> deactivate() async {
-//     if (workflow.value == null) return;
-
-//     isActing.value = true;
-
-//     try {
-//       final auth = Get.find<AuthController>();
-
-//       // 🔥 DEMO MODE
-//       if (auth.isDemo) {
-//         workflow.value = workflow.value!.copyWith(active: false);
-
-//         Get.snackbar(
-//           'Success',
-//           'Workflow deactivated (Demo)',
-//           snackPosition: SnackPosition.BOTTOM,
-//         );
-
-//         return;
-//       }
-
-//       // ✅ REAL API
-//       await _apiService.deactivateWorkflow(workflow.value!.id);
-
-//       await loadWorkflow(workflow.value!.id);
-
-//       Get.snackbar(
-//         'Success',
-//         'Workflow deactivated',
-//         snackPosition: SnackPosition.BOTTOM,
-//       );
-//     } catch (e) {
-//       Get.snackbar(
-//         'Error',
-//         e.toString().replaceFirst('Exception: ', ''),
-//         snackPosition: SnackPosition.BOTTOM,
-//       );
-//     } finally {
-//       isActing.value = false;
-//     }
-//   }
-
-//   Future<void> runNow() async {
-//     if (workflow.value == null) return;
-
-//     isActing.value = true;
-
-//     try {
-//       // ✅ REAL API
-//       final result = await _apiService.runWorkflow(workflow.value!.id);
-
-//       Get.snackbar(
-//         'Workflow Triggered',
-//         'Execution ID: ${result['executionId'] ?? 'Started'}',
-//         snackPosition: SnackPosition.BOTTOM,
-//         duration: const Duration(seconds: 4),
-//       );
-//     } catch (e) {
-//       Get.snackbar(
-//         'Error',
-//         e.toString().replaceFirst('Exception: ', ''),
-//         snackPosition: SnackPosition.BOTTOM,
-//       );
-//     } finally {
-//       isActing.value = false;
-//     }
-//   }
-// }
-
-
-
 import 'package:get/get.dart';
+import 'package:n8n_manager/data/models/workflow_model.dart';
 import 'package:n8n_manager/data/mock_data.dart';
+import 'package:n8n_manager/folders/data/models/n8n_folder_model.dart';
+import 'package:n8n_manager/folders/data/services/n8n_folder_service.dart';
 import 'package:n8n_manager/presentation/controllers/auth_controller.dart';
-import '../../data/models/workflow_model.dart';
-import '../../services/n8n_api_service.dart';
+import 'package:n8n_manager/services/n8n_api_service.dart';
+import 'package:n8n_manager/tag/data/models/n8n_tag_model.dart';
+import 'package:n8n_manager/tag/data/services/n8n_tag_service.dart';
 
 class WorkflowController extends GetxController {
   final N8nApiService _apiService = Get.find<N8nApiService>();
@@ -250,12 +14,18 @@ class WorkflowController extends GetxController {
   final RxList<WorkflowModel> workflows = <WorkflowModel>[].obs;
   final RxList<WorkflowModel> filteredWorkflows = <WorkflowModel>[].obs;
 
+  final RxList<N8nFolder> folders = <N8nFolder>[].obs;
+  final RxList<N8nTag> tags = <N8nTag>[].obs;
+
   final RxBool isLoading = false.obs;
   final RxBool hasError = false.obs;
   final RxString errorMessage = ''.obs;
 
   final RxString searchQuery = ''.obs;
   final RxString filterStatus = 'all'.obs;
+  final RxList<String> selectedTags = <String>[].obs;
+  final RxnString folderIdFilter = RxnString();
+  final RxString sortOrder = 'updated'.obs;
 
   @override
   void onInit() {
@@ -264,6 +34,9 @@ class WorkflowController extends GetxController {
 
     ever(searchQuery, (_) => _applyFilter());
     ever(filterStatus, (_) => _applyFilter());
+    ever(selectedTags, (_) => _applyFilter());
+    ever(folderIdFilter, (_) => _applyFilter());
+    ever(sortOrder, (_) => _applyFilter());
   }
 
   Future<void> fetchWorkflows() async {
@@ -274,21 +47,30 @@ class WorkflowController extends GetxController {
     try {
       final auth = Get.find<AuthController>();
 
-      // 🔥 DEMO MODE
       if (auth.isDemo) {
-        final mockList =
-            MockData.data['workflows_response']['data'] as List;
-
+        final mockList = MockData.data['workflows_response']['data'] as List;
         workflows.value =
             mockList.map((e) => WorkflowModel.fromJson(e)).toList();
+
+        final mockFolders = MockData.data['folders_response'];
+        folders.value = ((mockFolders?['data'] ?? []) as List)
+            .map((e) => N8nFolder.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+
+        final mockTags = MockData.data['tags_response'];
+        tags.value = ((mockTags?['data'] ?? []) as List)
+            .map((e) => N8nTag.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
 
         _applyFilter();
         return;
       }
 
-      // 🌐 REAL API
       final result = await _apiService.getWorkflows(limit: 100);
       workflows.value = result;
+
+      _loadFolderOptions();
+      _loadTagOptions();
 
       _applyFilter();
     } catch (e) {
@@ -299,20 +81,61 @@ class WorkflowController extends GetxController {
     }
   }
 
+  Future<void> _loadFolderOptions() async {
+    try {
+      final folders = await N8nFolderService(_apiService).getFolders();
+      this.folders.value = folders;
+    } catch (_) {}
+  }
+
+  Future<void> _loadTagOptions() async {
+    try {
+      final service = Get.find<N8nTagService>();
+      tags.value = await service.getAllTags();
+    } catch (_) {}
+  }
+
   void _applyFilter() {
     var list = List<WorkflowModel>.from(workflows);
 
-    // status filter
     if (filterStatus.value == 'active') {
       list = list.where((w) => w.active).toList();
     } else if (filterStatus.value == 'inactive') {
       list = list.where((w) => !w.active).toList();
     }
 
-    // search filter
+    final folderId = folderIdFilter.value;
+    if (folderId != null) {
+      list = list.where((w) => w.parentFolderId == folderId).toList();
+    }
+
+    if (selectedTags.isNotEmpty) {
+      list = list
+          .where((w) =>
+              selectedTags.every((t) => w.tags.map((e) => e.toLowerCase()).contains(t.toLowerCase())))
+          .toList();
+    }
+
     if (searchQuery.value.isNotEmpty) {
       final q = searchQuery.value.toLowerCase();
-      list = list.where((w) => w.name.toLowerCase().contains(q)).toList();
+      list = list.where((w) {
+        final nodeText = w.nodes
+            .map((n) {
+              final m = n is Map<String, dynamic> ? n : <String, dynamic>{};
+              return '${m['name']} ${m['type']}';
+            })
+            .join(' ')
+            .toLowerCase();
+        return w.name.toLowerCase().contains(q) ||
+            w.tags.any((t) => t.toLowerCase().contains(q)) ||
+            nodeText.contains(q);
+      }).toList();
+    }
+
+    if (sortOrder.value == 'name') {
+      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    } else {
+      list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     }
 
     filteredWorkflows.value = list;
@@ -320,4 +143,25 @@ class WorkflowController extends GetxController {
 
   void setSearch(String q) => searchQuery.value = q;
   void setFilter(String status) => filterStatus.value = status;
+
+  void toggleTag(String tagName) {
+    if (selectedTags.contains(tagName)) {
+      selectedTags.remove(tagName);
+    } else {
+      selectedTags.add(tagName);
+    }
+  }
+
+  bool isTagSelected(String tagName) => selectedTags.contains(tagName);
+
+  void setFolderFilter(String? folderId) => folderIdFilter.value = folderId;
+
+  void setSort(String order) => sortOrder.value = order;
+
+  void clearFilters() {
+    searchQuery.value = '';
+    filterStatus.value = 'all';
+    selectedTags.clear();
+    folderIdFilter.value = null;
+  }
 }

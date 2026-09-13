@@ -16,7 +16,8 @@ class MockData {
             {"name": "Gmail", "type": "n8n-nodes-base.gmail"}
           ],
           "lastExecutionStatus": "success",
-          "lastExecutionAt": "2024-03-28T08:00:07Z"
+          "lastExecutionAt": "2024-03-28T08:00:07Z",
+          "parentFolderId": "folder-3"
         },
         {
           "id": "2",
@@ -31,7 +32,8 @@ class MockData {
             {"name": "Slack", "type": "n8n-nodes-base.slack"}
           ],
           "lastExecutionStatus": "error",
-          "lastExecutionAt": "2024-03-28T09:15:01Z"
+          "lastExecutionAt": "2024-03-28T09:15:01Z",
+          "parentFolderId": "folder-1"
         },
         {
           "id": "3",
@@ -46,7 +48,8 @@ class MockData {
             {"name": "Discord", "type": "n8n-nodes-base.discord"}
           ],
           "lastExecutionStatus": "success",
-          "lastExecutionAt": "2024-03-25T14:30:05Z"
+          "lastExecutionAt": "2024-03-25T14:30:05Z",
+          "parentFolderId": "folder-2"
         },
         {
           "id": "4",
@@ -77,7 +80,8 @@ class MockData {
             {"name": "Dropbox", "type": "n8n-nodes-base.dropbox"}
           ],
           "lastExecutionStatus": "success",
-          "lastExecutionAt": "2024-03-20T11:00:10Z"
+          "lastExecutionAt": "2024-03-20T11:00:10Z",
+          "parentFolderId": "folder-1"
         }
       ]
     },
@@ -127,6 +131,37 @@ class MockData {
         { "id": "tag-5", "name": "DevOps" },
         { "id": "tag-6", "name": "CRM" },
         { "id": "tag-7", "name": "Backup" }
+      ]
+    },
+    "folders_response": {
+      "data": [
+        {
+          "id": "folder-1",
+          "name": "Operations",
+          "parentFolderId": null,
+          "createdAt": "2024-01-05T08:00:00.000Z",
+          "updatedAt": "2024-03-20T09:00:00.000Z",
+          "workflowCount": 2,
+          "subFolderCount": 1
+        },
+        {
+          "id": "folder-2",
+          "name": "Marketing",
+          "parentFolderId": null,
+          "createdAt": "2024-02-01T10:00:00.000Z",
+          "updatedAt": "2024-03-18T12:00:00.000Z",
+          "workflowCount": 1,
+          "subFolderCount": 0
+        },
+        {
+          "id": "folder-3",
+          "name": "Email Automation",
+          "parentFolderId": "folder-1",
+          "createdAt": "2024-02-10T09:00:00.000Z",
+          "updatedAt": "2024-03-28T08:00:00.000Z",
+          "workflowCount": 1,
+          "subFolderCount": 0
+        }
       ]
     },
     "credentials_response": {

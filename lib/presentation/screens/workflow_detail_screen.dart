@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
+import 'package:n8n_manager/folders/modules/folders/controllers/folder_controller.dart';
+import 'package:n8n_manager/folders/modules/folders/views/folder_picker_sheet.dart';
 import 'package:n8n_manager/presentation/controllers/workflow__details_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
@@ -154,6 +156,11 @@ class _WorkflowDetailScreenState extends State<WorkflowDetailScreen> {
               value: AppUtils.formatDate(wf.updatedAt.toIso8601String())),
           if (wf.tags.isNotEmpty)
             InfoRow(label: 'Tags', value: wf.tags.join(', ')),
+          if (wf.parentFolderId != null)
+            InfoRow(
+              label: 'Folder',
+              value: _folderNameOf(wf.parentFolderId!) ?? wf.parentFolderId!,
+            ),
           if (wf.lastExecutionStatus != null)
             InfoRow(
               label: 'Last Execution',
@@ -166,6 +173,30 @@ class _WorkflowDetailScreenState extends State<WorkflowDetailScreen> {
         .animate()
         .fadeIn(delay: 100.ms, duration: 300.ms)
         .slideY(begin: 0.1, end: 0);
+  }
+
+  String? _folderNameOf(String id) {
+    try {
+      return Get.find<FolderController>()
+          .folders
+          .where((f) => f.id == id)
+          .firstOrNull
+          ?.name;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _moveToFolder(WorkflowModel wf) async {
+    final result = await showFolderPickerSheet(
+      context,
+      currentFolderId: wf.parentFolderId,
+    );
+    if (result == null) return;
+    await _controller.moveToFolder(
+      result.root ? null : result.folder?.id,
+      result.folder,
+    );
   }
 
   Widget _buildActionButtons(
@@ -205,6 +236,14 @@ class _WorkflowDetailScreenState extends State<WorkflowDetailScreen> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        _ActionButton(
+          label: 'Move to Folder',
+          icon: Icons.drive_file_move_rounded,
+          color: AppTheme.accentColor,
+          isLoading: isActing,
+          onTap: () => _moveToFolder(wf),
         ),
       ],
     )

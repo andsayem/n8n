@@ -11,6 +11,7 @@ import '../../data/models/workflow_model.dart';
 import '../controllers/workflow_controller.dart';
 import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
+import '../../folders/modules/folders/views/folder_list_screen.dart';
 
 class WorkflowListScreen extends StatefulWidget {
   const WorkflowListScreen({super.key});
@@ -78,6 +79,9 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
                 Theme.of(context).scaffoldBackgroundColor,
             pinned: true,
             title: const Text('Workflows'),
+            actions: [
+              _SortMenu(controller: controller),
+            ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(112),
               child: Padding(
@@ -85,7 +89,7 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
                 child: Column(
                   children: [
                     _SearchBar(controller: controller),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _FilterTabs(controller: controller),
                   ],
                 ),
@@ -93,60 +97,87 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
             ),
           ),
         ],
-        body: Obx(() {
-          if (controller.isLoading.value) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 6,
-              itemBuilder: (_, __) => const Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: CardSkeletonLoader(),
-              ),
-            );
-          }
-
-          if (controller.hasError.value) {
-            return ErrorRetryWidget(
-              message: controller.errorMessage.value,
-              onRetry: controller.fetchWorkflows,
-            );
-          }
-
-          if (controller.filteredWorkflows.isEmpty) {
-            return EmptyStateWidget(
-              title: controller.searchQuery.value.isNotEmpty
-                  ? 'No Results Found'
-                  : 'No Workflows',
-              subtitle: controller.searchQuery.value.isNotEmpty
-                  ? 'Try a different search term.'
-                  : 'Create workflows in your n8n instance.',
-              icon: Icons.account_tree_rounded,
-            );
-          }
-
-          return Column(
-            children: [
-              // ✅ Banner ad (only shows if loaded — skipped when subscribed)
-              BannerAdView(ad: _bannerAd),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: controller.fetchWorkflows,
-                  color: AppTheme.primaryColor,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: controller.filteredWorkflows.length,
-                    itemBuilder: (context, index) {
-                      return _WorkflowCard(
-                        workflow: controller.filteredWorkflows[index],
-                        index: index,
-                      );
-                    },
-                  ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              color: Theme.of(context).appBarTheme.backgroundColor ??
+                  Theme.of(context).scaffoldBackgroundColor,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _FolderChips(controller: controller),
+                    const SizedBox(height: 8),
+                    _TagChips(controller: controller),
+                  ],
                 ),
               ),
-            ],
-          );
-        }),
+            ),
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 6,
+                    itemBuilder: (_, __) => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: CardSkeletonLoader(),
+                    ),
+                  );
+                }
+
+                if (controller.hasError.value) {
+                  return ErrorRetryWidget(
+                    message: controller.errorMessage.value,
+                    onRetry: controller.fetchWorkflows,
+                  );
+                }
+
+                if (controller.filteredWorkflows.isEmpty) {
+                  return EmptyStateWidget(
+                    title: controller.searchQuery.value.isNotEmpty
+                        ? 'No Results Found'
+                        : 'No Workflows',
+                    subtitle: controller.searchQuery.value.isNotEmpty
+                        ? 'Try a different search term.'
+                        : 'Create workflows in your n8n instance.',
+                    icon: Icons.account_tree_rounded,
+                  );
+                }
+
+                return Column(
+                  children: [
+                    // ✅ Banner ad (only shows if loaded — skipped when subscribed)
+                    BannerAdView(ad: _bannerAd),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: controller.fetchWorkflows,
+                        color: AppTheme.primaryColor,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: controller.filteredWorkflows.length,
+                          itemBuilder: (context, index) {
+                            final wf = controller.filteredWorkflows[index];
+                            final folder = controller.folders
+                                .where((f) => f.id == wf.parentFolderId)
+                                .firstOrNull;
+                            return _WorkflowCard(
+                              workflow: wf,
+                              index: index,
+                              folderName: folder?.name,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -253,11 +284,215 @@ class _FilterTabs extends StatelessWidget {
   }
 }
 
+class _SortMenu extends StatelessWidget {
+  final WorkflowController controller;
+
+  const _SortMenu({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Sort',
+      icon: const Icon(Icons.sort_rounded, size: 20),
+      color: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: controller.setSort,
+      itemBuilder: (_) => [
+          const PopupMenuItem(
+            value: 'updated',
+            child: Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 16),
+                SizedBox(width: 8),
+                Text('Recently Updated'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'name',
+            child: Row(
+              children: [
+                Icon(Icons.sort_by_alpha_rounded, size: 16),
+                SizedBox(width: 8),
+                Text('Name (A-Z)'),
+              ],
+            ),
+          ),
+        ],
+      );
+  }
+}
+
+class _FolderChips extends StatelessWidget {
+  final WorkflowController controller;
+
+  const _FolderChips({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final selected = controller.folderIdFilter.value;
+      final topFolders = controller.folders.where((f) => f.isRoot).toList();
+
+      return SizedBox(
+        width: double.infinity,
+        height: 36,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            _chip(context,
+                label: 'All folders',
+                icon: Icons.home_rounded,
+                selected: selected == null,
+                onTap: () => controller.setFolderFilter(null)),
+            for (final f in topFolders)
+              _chip(context,
+                  label: f.name,
+                  icon: Icons.folder_rounded,
+                  selected: selected == f.id,
+                  onTap: () => controller.setFolderFilter(f.id)),
+            _chip(
+              context,
+              label: 'Manage',
+              icon: Icons.folder_open_rounded,
+              selected: false,
+              onTap: () => Get.to(() => const FolderListScreen()),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _chip(BuildContext context,
+      {required String label,
+      required IconData icon,
+      required bool selected,
+      required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppTheme.primaryColor
+                : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected
+                  ? AppTheme.primaryColor
+                  : Theme.of(context).dividerColor,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon,
+                  size: 13,
+                  color: selected
+                      ? Colors.white
+                      : Theme.of(context).textTheme.bodySmall?.color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: selected
+                      ? Colors.white
+                      : Theme.of(context).textTheme.bodySmall?.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TagChips extends StatelessWidget {
+  final WorkflowController controller;
+
+  const _TagChips({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.tags.isEmpty &&
+          controller.selectedTags.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return SizedBox(
+        width: double.infinity,
+        height: 36,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: controller.tags.map((tag) {
+            final selected = controller.isTagSelected(tag.name);
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => controller.toggleTag(tag.name),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppTheme.accentColor
+                        : Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: selected
+                          ? AppTheme.accentColor
+                          : Theme.of(context).dividerColor,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        selected
+                            ? Icons.check_rounded
+                            : Icons.label_rounded,
+                        size: 13,
+                        color: selected
+                            ? Colors.white
+                            : Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        tag.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: selected
+                              ? Colors.white
+                              : Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      );
+    });
+  }
+}
+
 class _WorkflowCard extends StatelessWidget {
   final WorkflowModel workflow;
   final int index;
+  final String? folderName;
 
-  const _WorkflowCard({required this.workflow, required this.index});
+  const _WorkflowCard({
+    required this.workflow,
+    required this.index,
+    this.folderName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +566,24 @@ class _WorkflowCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (folderName != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.folder_rounded,
+                      size: 13, color: AppTheme.accentColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    folderName!,
+                    style: const TextStyle(
+                      color: AppTheme.accentColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (workflow.tags.isNotEmpty) ...[
               const SizedBox(height: 10),
               Wrap(

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/audit/modules/activity/views/activity_screen.dart';
+import 'package:n8n_manager/folders/modules/folders/views/folder_list_screen.dart';
 import 'package:n8n_manager/tag/modules/credentials/views/credential_list_screen.dart';
 import 'package:n8n_manager/tag/modules/tags/views/tag_list_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -170,6 +172,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.key_rounded,
                     iconColor: AppTheme.warningColor,
                     onTap: () => Get.to(() => const CredentialListScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Folders',
+                    subtitle: 'Organize workflows into folders',
+                    icon: Icons.folder_rounded,
+                    iconColor: AppTheme.accentColor,
+                    onTap: () => Get.to(() => const FolderListScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Activity Log',
+                    subtitle: 'Track changes made in this app',
+                    icon: Icons.history_rounded,
+                    iconColor: AppTheme.warningColor,
+                    onTap: () => Get.to(() => const ActivityScreen()),
                   ),
                 ]),
                 const SizedBox(height: 20),
