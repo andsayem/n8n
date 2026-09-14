@@ -1,7 +1,7 @@
 name: n8n_manager
 description: A professional n8n automation server manager for mobile.
 publish_to: 'none'
-version: 1.1.1+12
+version: 1.1.2+14
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -32,7 +32,6 @@ dependencies:
   flutter_easyloading: ^3.0.5
   upgrader: ^13.1.0
   flutter_riverpod: ^3.3.1
-  workmanager: ^0.9.0+3
   flutter_local_notifications: ^21.0.0
   flutter_spinkit: ^5.2.2
 
