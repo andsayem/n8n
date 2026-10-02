@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/core/widgets/medium_rect_ad.dart';
 import 'package:n8n_manager/audit/modules/activity/views/activity_screen.dart';
 import 'package:n8n_manager/folders/modules/folders/views/folder_list_screen.dart';
 import 'package:n8n_manager/tag/modules/credentials/views/credential_list_screen.dart';
@@ -11,11 +11,16 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
+import '../../tools/screens/deploy_guide_screen.dart';
+import '../../tools/screens/projects_screen.dart';
+import '../../tools/screens/security_audit_screen.dart';
+import '../../tools/screens/server_health_screen.dart';
+import '../../tools/screens/users_screen.dart';
+import '../../tools/screens/variables_screen.dart';
 import '../../data/models/instance_model.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../controllers/purchase_controller.dart';
-import '../widgets/banner_ad_view.dart';
 import 'login_screen.dart';
 import 'subscription_screen.dart';
 
@@ -29,7 +34,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
   String _buildNumber = '';
   final authController = Get.find<AuthController>();
-  BannerAd? _bannerAd;
 
   @override
   void initState() {
@@ -38,42 +42,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _initAdd();
   }
 
-  Future<void> _initAdd() async {
-    // ✅ SKIP all ad loading if user has subscription
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-    } catch (_) {}
-
+  void _initAdd() {
     AdmobHelper.loadInterstitialAd();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
-
-    try {
-      // Double-check subscription after delay (may have loaded by now)
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-
-      final width = MediaQuery.of(context).size.width.toInt();
-
-      final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width - 50, height: 220),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _bannerAd = ad;
-      });
-    } catch (e) {
-      debugPrint("Banner load error: $e");
-
-      setState(() {
-        _bannerAd = null;
-      });
-    }
   }
 
   Future<void> _loadPackageInfo() async {
@@ -135,7 +105,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ]),
-                const SizedBox(height: 20),
+                // ── Ad (2nd section, visible without scrolling) ────────────
+                const MediumRectAd(padding: EdgeInsets.only(top: 8, bottom: 20)),
                 // ── Subscription ─────────────────────────────────────────
                 Obx(() {
                   final pc = Get.find<PurchaseController>();
@@ -192,8 +163,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ]),
                 const SizedBox(height: 20),
 
-                const SizedBox(height: 20),
-                BannerAdView(ad: _bannerAd),
+                // ── n8n Server tools ───────────────────────────────────────
+                _buildSection(context, 'n8n Server', [
+                  _ActionTile(
+                    title: 'Server Health',
+                    subtitle: 'Latency, API check and Git pull',
+                    icon: Icons.monitor_heart_rounded,
+                    iconColor: AppTheme.successColor,
+                    onTap: () => Get.to(() => const ServerHealthScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Variables',
+                    subtitle: 'Global variables for all workflows',
+                    icon: Icons.data_object_rounded,
+                    iconColor: AppTheme.accentColor,
+                    onTap: () => Get.to(() => const VariablesScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Projects',
+                    subtitle: 'Team projects and sharing',
+                    icon: Icons.workspaces_rounded,
+                    iconColor: const Color(0xFF7C6CFF),
+                    onTap: () => Get.to(() => const ProjectsScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Users',
+                    subtitle: 'Invite members and manage roles',
+                    icon: Icons.group_rounded,
+                    iconColor: AppTheme.warningColor,
+                    onTap: () => Get.to(() => const UsersScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Security Audit',
+                    subtitle: 'Scan for risky nodes and credentials',
+                    icon: Icons.shield_rounded,
+                    iconColor: AppTheme.errorColor,
+                    onTap: () => Get.to(() => const SecurityAuditScreen()),
+                  ),
+                  _TileDivider(),
+                  _ActionTile(
+                    title: 'Deploy n8n',
+                    subtitle: 'Docker, VPS, npm and cloud guides',
+                    icon: Icons.rocket_launch_rounded,
+                    iconColor: AppTheme.primaryColor,
+                    onTap: () => Get.to(() => const DeployGuideScreen()),
+                  ),
+                ]),
                 const SizedBox(height: 20),
 
                 // ── Appearance ───────────────────────────────────────────
@@ -393,7 +412,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom +
+                MediaQuery.of(ctx).viewPadding.bottom),
         child: const SizedBox(height: 620, child: AddInstanceScreen()),
       ),
     );

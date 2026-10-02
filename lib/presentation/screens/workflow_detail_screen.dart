@@ -8,6 +8,10 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/workflow_model.dart';
 import '../widgets/common_widgets.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/widgets/medium_rect_ad.dart';
+import '../../tag/modules/tags/controllers/tag_controller.dart';
+import '../../tools/widgets/tool_widgets.dart';
 
 class WorkflowDetailScreen extends StatefulWidget {
   const WorkflowDetailScreen({super.key});
@@ -53,7 +57,7 @@ class _WorkflowDetailScreenState extends State<WorkflowDetailScreen> {
                     const _WorkflowDetailSkeleton()
                   else ...[
                     _buildStatusBanner(context, wf),
-                    const SizedBox(height: 20),
+                    const MediumRectAd(padding: EdgeInsets.symmetric(vertical: 16)),
                     _buildInfoCard(context, wf),
                     const SizedBox(height: 20),
                     _buildActionButtons(context, wf, isActing),
@@ -199,6 +203,96 @@ class _WorkflowDetailScreenState extends State<WorkflowDetailScreen> {
     );
   }
 
+  Future<void> _duplicate(WorkflowModel wf) async {
+    final values = await showFormSheet(
+      title: 'Duplicate workflow',
+      fields: [FormFieldSpec('New name', initial: '${wf.name} (copy)')],
+      submit: 'Duplicate',
+    );
+    if (values == null) return;
+    await runAction(() => _controller.duplicate(values[0]),
+        success: 'Created "${values[0]}" (inactive)');
+  }
+
+  Future<void> _export() async {
+    final json = await runWithProgress(_controller.exportJson);
+    if (json == null) return;
+    await SharePlus.instance.share(ShareParams(
+        text: json, subject: '${_controller.workflow.value?.name}.json'));
+  }
+
+  Future<void> _delete(WorkflowModel wf) async {
+    if (!await confirmDialog('Delete workflow',
+        'Permanently delete "${wf.name}" and its execution history?')) {
+      return;
+    }
+    final ok = await runAction(_controller.delete, success: 'Workflow deleted');
+    // Navigator, not Get.back(): Get.back() would close the snackbar first.
+    if (ok && mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _editTags(WorkflowModel wf) async {
+    final tagCtrl = Get.find<TagController>();
+    if (tagCtrl.tags.isEmpty) await tagCtrl.loadTags();
+    final all = tagCtrl.tags.toList();
+    if (all.isEmpty) {
+      toolToast('Create tags first in Settings > Tags', error: true);
+      return;
+    }
+    final selected = all.where((t) => wf.tags.contains(t.name)).map((t) => t.id).toSet();
+    final result = await Get.bottomSheet<Set<String>>(
+      StatefulBuilder(builder: (context, setSheet) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Workflow tags',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: all
+                    .map((t) => FilterChip(
+                          label: Text(t.name),
+                          selected: selected.contains(t.id),
+                          selectedColor:
+                              AppTheme.primaryColor.withValues(alpha: 0.2),
+                          onSelected: (v) => setSheet(() => v
+                              ? selected.add(t.id)
+                              : selected.remove(t.id)),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Get.back(result: selected),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: const Text('Save tags'),
+              ),
+            ],
+          ),
+        );
+      }),
+      isScrollControlled: true,
+    );
+    if (result == null) return;
+    final names = all.where((t) => result.contains(t.id)).map((t) => t.name).toList();
+    await runAction(() => _controller.setTags(result.toList(), names),
+        success: 'Tags updated');
+  }
+
   Widget _buildActionButtons(
       BuildContext context, WorkflowModel wf, bool isActing) {
     return Column(
@@ -238,12 +332,60 @@ class _WorkflowDetailScreenState extends State<WorkflowDetailScreen> {
           ],
         ),
         const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionButton(
+                label: 'Move to Folder',
+                icon: Icons.drive_file_move_rounded,
+                color: AppTheme.accentColor,
+                isLoading: isActing,
+                onTap: () => _moveToFolder(wf),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionButton(
+                label: 'Edit Tags',
+                icon: Icons.label_rounded,
+                color: const Color(0xFF7C6CFF),
+                isLoading: isActing,
+                onTap: () => _editTags(wf),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionButton(
+                label: 'Duplicate',
+                icon: Icons.copy_all_rounded,
+                color: const Color(0xFF2496ED),
+                isLoading: isActing,
+                onTap: () => _duplicate(wf),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionButton(
+                label: 'Export JSON',
+                icon: Icons.ios_share_rounded,
+                color: AppTheme.successColor,
+                isLoading: isActing,
+                onTap: _export,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         _ActionButton(
-          label: 'Move to Folder',
-          icon: Icons.drive_file_move_rounded,
-          color: AppTheme.accentColor,
+          label: 'Delete Workflow',
+          icon: Icons.delete_forever_rounded,
+          color: AppTheme.errorColor,
           isLoading: isActing,
-          onTap: () => _moveToFolder(wf),
+          onTap: () => _delete(wf),
         ),
       ],
     )

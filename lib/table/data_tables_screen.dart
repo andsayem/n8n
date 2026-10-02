@@ -139,11 +139,9 @@
 // }
 import 'package:flutter/material.dart' hide TableRow;
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
+import 'package:n8n_manager/core/widgets/medium_rect_ad.dart';
 import 'package:n8n_manager/presentation/controllers/data_tables_controller.dart';
-import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
-import 'package:n8n_manager/presentation/widgets/banner_ad_view.dart';
 import 'package:n8n_manager/presentation/widgets/common_widgets.dart';
 import 'package:n8n_manager/table/empty_tables_widget.dart';
 import 'package:n8n_manager/table/table_card.dart';
@@ -160,54 +158,10 @@ class DataTablesScreen extends StatefulWidget {
 }
 
 class _DataTablesScreenState extends State<DataTablesScreen> {
-  BannerAd? _bannerAd;
-
   @override
   void initState() {
     super.initState();
-    _initAd();
-  }
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _initAd() async {
-    // ✅ SKIP all ad loading if user has subscription
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-    } catch (_) {}
-
     AdmobHelper.loadInterstitialAd();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
-
-    try {
-      // Double-check subscription after delay (may have loaded by now)
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-
-      final width = MediaQuery.of(context).size.width.toInt();
-      final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width - 50, height: 220),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _bannerAd = ad;
-      });
-    } catch (e) {
-      debugPrint("Banner load error: $e");
-      setState(() {
-        _bannerAd = null;
-      });
-    }
   }
 
   @override
@@ -242,16 +196,7 @@ class _DataTablesScreenState extends State<DataTablesScreen> {
             ),
 
             // ── Banner Ad ───────────────────────────────────────────────────
-            if (_bannerAd != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: BannerAdView(ad: _bannerAd),
-                  ),
-                ),
-              ),
+            const SliverToBoxAdapter(child: MediumRectAd()),
 
             Obx(() {
               if (ctrl.isLoading.value) {

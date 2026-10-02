@@ -11,6 +11,8 @@ import '../controllers/dashboard_controller.dart';
 import '../controllers/execution_controller.dart';
 import '../controllers/workflow_controller.dart';
 import 'dashboard_screen.dart';
+import '../../folders/modules/folders/controllers/folder_controller.dart';
+import '../controllers/data_tables_controller.dart';
 import 'execution_screens.dart';
 import 'settings_screen.dart';
 import 'workflow_list_screen.dart';
@@ -33,59 +35,51 @@ class _HomeScreenState extends State<HomeScreen> {
     const SettingsScreen(),
   ];
 
+  // Controllers created by this screen. A new HomeScreen (after switching
+  // instance) is built before the old one is disposed, so each screen only
+  // deletes the instances it created itself.
+  final List<VoidCallback> _releasers = [];
+
+  T _fresh<T extends Object>(T Function() create) {
+    if (Get.isRegistered<T>()) Get.delete<T>(force: true);
+    final instance = Get.put<T>(create());
+    _releasers.add(() {
+      if (Get.isRegistered<T>() && identical(Get.find<T>(), instance)) {
+        Get.delete<T>(force: true);
+      }
+    });
+    return instance;
+  }
+
   @override
   void initState() {
     super.initState();
-    // Initialize controllers (guard to prevent duplicate registration)
-    if (!Get.isRegistered<DashboardController>()) {
-      Get.put(DashboardController());
+    // Always start from fresh controllers so data from a previously active
+    // instance (or the demo) never leaks into this one.
+    _fresh(() => DashboardController());
+    _fresh(() => WorkflowController());
+    _fresh(() => ExecutionController());
+    if (Get.isRegistered<DataTableListController>()) {
+      Get.delete<DataTableListController>(force: true);
     }
-    if (!Get.isRegistered<WorkflowController>()) {
-      Get.put(WorkflowController());
+    if (Get.isRegistered<FolderController>()) {
+      Get.delete<FolderController>(force: true);
     }
-    if (!Get.isRegistered<ExecutionController>()) {
-      Get.put(ExecutionController());
-    }
+    Get.lazyPut(() => FolderController(), fenix: true);
+
     // ── Tags & Credentials ──────────────────────────────────────────────────
-
     final apiService = Get.find<N8nApiService>();
-
-    if (!Get.isRegistered<N8nTagService>()) {
-      Get.put(N8nTagService(apiService.dio));
-    }
-    if (!Get.isRegistered<N8nCredentialService>()) {
-      Get.put(N8nCredentialService(apiService.dio));
-    }
-    if (!Get.isRegistered<TagController>()) {
-      Get.put(TagController(Get.find<N8nTagService>()));
-    }
-    if (!Get.isRegistered<CredentialController>()) {
-      Get.put(CredentialController(Get.find<N8nCredentialService>()));
-    }
+    final tagService = _fresh(() => N8nTagService(apiService.dio));
+    final credService = _fresh(() => N8nCredentialService(apiService.dio));
+    _fresh(() => TagController(tagService));
+    _fresh(() => CredentialController(credService));
   }
 
   @override
   void dispose() {
-    if (Get.isRegistered<DashboardController>()) {
-      Get.delete<DashboardController>();
+    for (final release in _releasers.reversed) {
+      release();
     }
-    if (Get.isRegistered<WorkflowController>()) {
-      Get.delete<WorkflowController>();
-    }
-    if (Get.isRegistered<ExecutionController>()) {
-      Get.delete<ExecutionController>();
-    }
-
-    // ── Tags & Credentials ──────────────────────────────────────────────────
-    if (Get.isRegistered<TagController>()) Get.delete<TagController>();
-    if (Get.isRegistered<CredentialController>()) {
-      Get.delete<CredentialController>();
-    }
-    if (Get.isRegistered<N8nTagService>()) Get.delete<N8nTagService>();
-    if (Get.isRegistered<N8nCredentialService>()) {
-      Get.delete<N8nCredentialService>();
-    }
-
     super.dispose();
   }
 

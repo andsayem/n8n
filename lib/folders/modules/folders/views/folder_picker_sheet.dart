@@ -18,9 +18,13 @@ Future<FolderPickResult?> showFolderPickerSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (ctx) => _FolderPickerSheet(
-      controller: ctrl,
-      currentFolderId: currentFolderId,
+    // Keep the sheet clear of the system navigation bar (edge-to-edge).
+    builder: (ctx) => SafeArea(
+      top: false,
+      child: _FolderPickerSheet(
+        controller: ctrl,
+        currentFolderId: currentFolderId,
+      ),
     ),
   );
 }

@@ -2,26 +2,67 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:n8n_manager/ads_config.dart';
 import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 
 class AdmobHelper with WidgetsBindingObserver {
-  //ca-app-pub-1195883693665145/6786028831
   // ---------------- Ad Unit IDs ----------------
-  static const String bannerAdUnitId = "ca-app-pub-1195883693665145/9026463491";
-  static const String interstitialAdUnitId =
-      "ca-app-pub-1195883693665145/5604650274";
-  static const String rewardedAdUnitId =
-      "ca-app-pub-1195883693665145/2203627161";
-  static const String appOpenAdUnitId =
-      "ca-app-pub-1195883693665145/4291568600";
+  // Debug builds use Google's test IDs so real ads are never served while
+  // testing on our own devices (see ads_config.dart).
+  static String get bannerAdUnitId => adsConfig.effectiveBannerAdUnitId;
+  static String get interstitialAdUnitId =>
+      adsConfig.effectiveInterstitialAdUnitId;
+  static String get appOpenAdUnitId => adsConfig.effectiveAppOpenAdUnitId;
+  static String get nativeAdUnitId => adsConfig.effectiveNativeAdUnitId;
+
+  /// True when the user bought "Remove Ads".
+  static bool get adsRemoved {
+    try {
+      return Get.find<PurchaseController>().adsRemoved.value;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ================= Interstitial =================
   static InterstitialAd? _interstitialAd;
   static bool suppressAppOpen = false;
+
+  // Frequency control for action-triggered interstitials.
+  static DateTime? _lastInterstitialAt;
+  static int _actionCount = 0;
+  static const Duration interstitialCooldown = Duration(seconds: 60);
+  static const int actionsPerInterstitial = 3;
+
+  /// Counts a user action (opening a detail page, running a workflow, ...)
+  /// and shows an interstitial every [actionsPerInterstitial] actions, never
+  /// more often than [interstitialCooldown]. [then] always runs.
+  static void maybeShowInterstitial({VoidCallback? then}) {
+    if (adsRemoved) {
+      then?.call();
+      return;
+    }
+    _actionCount++;
+    final last = _lastInterstitialAt;
+    final cooledDown =
+        last == null || DateTime.now().difference(last) > interstitialCooldown;
+    if (_actionCount >= actionsPerInterstitial &&
+        cooledDown &&
+        _interstitialAd != null) {
+      _actionCount = 0;
+      _lastInterstitialAt = DateTime.now();
+      showInterstitialAd(onAdDismissed: then);
+      return;
+    }
+    loadInterstitialAd();
+    then?.call();
+  }
 
   static bool _isInterstitialLoading = false;
 
   /// LOAD
   static void loadInterstitialAd() {
+    if (adsRemoved) return;
     if (_isInterstitialLoading || _interstitialAd != null) return;
 
     _isInterstitialLoading = true;
@@ -97,7 +138,10 @@ class AdmobHelper with WidgetsBindingObserver {
       },
     );
 
-    _interstitialAd!.show();
+    // show() can fail (e.g. app went to background); never crash on it.
+    _interstitialAd!
+        .show()
+        .catchError((e) => debugPrint("Interstitial show failed: $e"));
   }
 
   // ================= Rewarded =================
@@ -184,25 +228,33 @@ class AdmobHelper with WidgetsBindingObserver {
     return banner;
   }
 
-  static Future<BannerAd> loadBannerAd({
+  /// Loads a banner and completes with it once filled, or with null when the
+  /// request fails (so callers never render a disposed ad).
+  static Future<BannerAd?> loadBannerAd({
     String? adUnitId,
     AdSize size = const AdSize(width: 320, height: 50),
   }) async {
+    if (adsRemoved) return null;
+    final completer = Completer<BannerAd?>();
     final banner = BannerAd(
       adUnitId: adUnitId ?? bannerAdUnitId,
       size: size,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (ad) => debugPrint('Banner loaded'),
+        onAdLoaded: (ad) {
+          debugPrint('Banner loaded');
+          if (!completer.isCompleted) completer.complete(ad as BannerAd);
+        },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           debugPrint('Banner failed: $error');
+          if (!completer.isCompleted) completer.complete(null);
         },
       ),
     );
 
     await banner.load();
-    return banner;
+    return completer.future;
   }
 
   static BannerAd getBannerAdInstance(
@@ -290,7 +342,7 @@ class AdmobHelper with WidgetsBindingObserver {
       },
     );
 
-    _appOpenAd!.show();
+    _appOpenAd!.show().catchError((e) => debugPrint("AppOpen show failed: $e"));
   }
 
   @override

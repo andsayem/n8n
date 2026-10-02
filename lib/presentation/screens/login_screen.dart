@@ -810,8 +810,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/auth_controller.dart';
+import '../../tools/screens/deploy_guide_screen.dart';
 
 class AddInstanceScreen extends StatefulWidget {
   final bool isFirstTime;
@@ -860,8 +860,8 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_logged_in', true);
+    // addInstance marks the user as logged in only after the connection test
+    // succeeds.
     await _authController.addInstance(
       name: 'My n8n Server',
       baseUrl: _urlController.text.trim(),
@@ -894,7 +894,13 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
                 _buildConnectButton(),
                 _buildDivider(),
                 _buildDemoButton(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => Get.to(() => const DeployGuideScreen()),
+                  icon: const Icon(Icons.rocket_launch_rounded, size: 18),
+                  label: const Text('No n8n server yet? Deploy one'),
+                ),
+                const SizedBox(height: 12),
                 _buildInfoNote(),
                 const SizedBox(height: 32),
               ],
@@ -1222,7 +1228,7 @@ class _AddInstanceScreenState extends State<AddInstanceScreen> {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'For testing, use any URL and API key — the app will show mock data if the server is unreachable.',
+              'Use your n8n URL (https:// or http:// for local servers). Tap Try Demo to explore the app with sample data.',
               style: TextStyle(
                 fontSize: 11.5,
                 color: _orangeText,

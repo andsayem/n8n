@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
-import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
+import 'package:n8n_manager/core/widgets/medium_rect_ad.dart';
+import 'package:n8n_manager/tools/screens/import_workflow_screen.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/workflow_model.dart';
 import '../controllers/workflow_controller.dart';
-import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
 import '../../folders/modules/folders/views/folder_list_screen.dart';
 
@@ -21,49 +20,14 @@ class WorkflowListScreen extends StatefulWidget {
 }
 
 class _WorkflowListScreenState extends State<WorkflowListScreen> {
-  BannerAd? _bannerAd;
   @override
   void initState() {
     super.initState();
     _initAdd();
   }
 
-  Future<void> _initAdd() async {
-    // ✅ SKIP all ad loading if user has subscription
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-    } catch (_) {}
-
+  void _initAdd() {
     AdmobHelper.loadInterstitialAd();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
-
-    try {
-      // Double-check subscription after delay
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-
-      final width = MediaQuery.of(context).size.width.toInt();
-
-      final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width - 50, height: 220),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _bannerAd = ad;
-      });
-    } catch (e) {
-      debugPrint("Banner load error: $e");
-
-      setState(() {
-        _bannerAd = null;
-      });
-    }
   }
 
   @override
@@ -80,6 +44,11 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
             pinned: true,
             title: const Text('Workflows'),
             actions: [
+              IconButton(
+                tooltip: 'Import workflow',
+                icon: const Icon(Icons.add_rounded),
+                onPressed: () => Get.to(() => const ImportWorkflowScreen()),
+              ),
               _SortMenu(controller: controller),
             ],
             bottom: PreferredSize(
@@ -149,16 +118,22 @@ class _WorkflowListScreenState extends State<WorkflowListScreen> {
 
                 return Column(
                   children: [
-                    // ✅ Banner ad (only shows if loaded — skipped when subscribed)
-                    BannerAdView(ad: _bannerAd),
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: controller.fetchWorkflows,
                         color: AppTheme.primaryColor,
                         child: ListView.builder(
                           padding: const EdgeInsets.all(16),
-                          itemCount: controller.filteredWorkflows.length,
-                          itemBuilder: (context, index) {
+                          // The 300x250 ad sits right after the first card.
+                          itemCount: controller.filteredWorkflows.length + 1,
+                          itemBuilder: (context, i) {
+                            if (i == 1 ||
+                                (i == 0 &&
+                                    controller.filteredWorkflows.isEmpty)) {
+                              return const MediumRectAd(
+                                  padding: EdgeInsets.only(bottom: 12));
+                            }
+                            final index = i > 1 ? i - 1 : i;
                             final wf = controller.filteredWorkflows[index];
                             final folder = controller.folders
                                 .where((f) => f.id == wf.parentFolderId)
@@ -499,7 +474,9 @@ class _WorkflowCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () => Get.toNamed(AppRoutes.workflowDetail, arguments: workflow),
+      onTap: () => AdmobHelper.maybeShowInterstitial(
+          then: () =>
+              Get.toNamed(AppRoutes.workflowDetail, arguments: workflow)),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),

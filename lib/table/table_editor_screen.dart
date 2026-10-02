@@ -267,7 +267,8 @@ class _TableEditorScreenState extends State<TableEditorScreen> {
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+          bottom: MediaQuery.of(context).viewInsets.bottom +
+              MediaQuery.of(context).viewPadding.bottom,
         ),
         child: ColumnEditorSheet(
           existing: existing,

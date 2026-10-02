@@ -3,6 +3,7 @@ import 'package:n8n_manager/presentation/controllers/auth_controller.dart';
 import '../../data/models/dashboard_stats.dart';
 import '../../data/models/execution_model.dart';
 import '../../data/models/workflow_model.dart';
+import '../../data/mock_data.dart';
 import '../../services/n8n_api_service.dart';
 
 class DashboardController extends GetxController {
@@ -108,23 +109,28 @@ class DashboardController extends GetxController {
   // DEMO DATA
   // =========================
   void _loadDemoData() {
+    // Same sample data the Workflows and Executions tabs show.
+    final workflows = (MockData.data['workflows_response']['data'] as List)
+        .map((e) => WorkflowModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+    final executions = (MockData.data['executions_response']['data'] as List)
+        .map((e) => ExecutionModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList()
+      ..sort((a, b) => (b.startedAt ?? '').compareTo(a.startedAt ?? ''));
+    final dayAgo = DateTime.now().toUtc().subtract(const Duration(days: 1));
+
     stats.value = DashboardStats(
-      totalWorkflows: 5,
-      activeWorkflows: 3,
-      failedExecutions: 1,
-      totalExecutionsToday: 2,
+      totalWorkflows: workflows.length,
+      activeWorkflows: workflows.where((w) => w.active).length,
+      failedExecutions: executions.where((e) => e.status == 'error').length,
+      totalExecutionsToday: executions
+          .where((e) =>
+              DateTime.tryParse(e.startedAt ?? '')?.isAfter(dayAgo) ??
+              false)
+          .length,
     );
 
-    recentExecutions.value = List.generate(
-      5,
-      (i) => ExecutionModel(
-        id: 'demo-$i',
-        workflowId: 'wf-$i',
-        status: i % 2 == 0 ? 'error' : 'success',
-        startedAt:
-            DateTime.now().subtract(Duration(hours: i)).toIso8601String(),
-      ),
-    );
+    recentExecutions.value = executions.take(10).toList();
 
     isLoading.value = false;
   }

@@ -10,7 +10,8 @@
         android:label="n8n"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
-        android:largeHeap="true">
+        android:largeHeap="true"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

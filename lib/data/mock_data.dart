@@ -1,5 +1,9 @@
 class MockData {
-  static Map<String, dynamic> data = {
+  /// Demo data with every timestamp shifted so the newest one is a few
+  /// minutes ago - the demo always looks current.
+  static final Map<String, dynamic> data = _shiftDates(_raw);
+
+  static final Map<String, dynamic> _raw = {
     "workflows_response": {
       "data": [
         {
@@ -214,4 +218,41 @@ class MockData {
       ]
     }
   };
+
+  static final _iso = RegExp(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}");
+
+  static Map<String, dynamic> _shiftDates(Map<String, dynamic> raw) {
+    DateTime? newest;
+    void scan(dynamic v) {
+      if (v is Map) v.values.forEach(scan);
+      if (v is List) v.forEach(scan);
+      if (v is String && _iso.hasMatch(v)) {
+        final d = DateTime.tryParse(v);
+        if (d != null && (newest == null || d.isAfter(newest!))) newest = d;
+      }
+    }
+
+    scan(raw);
+    if (newest == null) return raw;
+    final shift = DateTime.now()
+        .toUtc()
+        .subtract(const Duration(minutes: 4))
+        .difference(newest!);
+
+    dynamic apply(dynamic v) {
+      if (v is Map) {
+        return <String, dynamic>{
+          for (final e in v.entries) e.key.toString(): apply(e.value)
+        };
+      }
+      if (v is List) return v.map(apply).toList();
+      if (v is String && _iso.hasMatch(v)) {
+        final d = DateTime.tryParse(v);
+        if (d != null) return d.add(shift).toUtc().toIso8601String();
+      }
+      return v;
+    }
+
+    return apply(raw) as Map<String, dynamic>;
+  }
 }

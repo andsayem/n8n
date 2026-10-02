@@ -2,15 +2,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
-import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
+import 'package:n8n_manager/core/widgets/medium_rect_ad.dart';
+import 'package:n8n_manager/tools/data/n8n_tools_service.dart';
+import 'package:n8n_manager/tools/widgets/tool_widgets.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_utils.dart';
 import '../../data/models/execution_model.dart';
 import '../controllers/execution_controller.dart';
-import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
 
 // ─── Execution List ──────────────────────────────────────────────────────────
@@ -22,49 +22,14 @@ class ExecutionListScreen extends StatefulWidget {
 }
 
 class _ExecutionListScreenState extends State<ExecutionListScreen> {
-  BannerAd? _bannerAd;
   @override
   void initState() {
     super.initState();
     _initAdd();
   }
 
-  Future<void> _initAdd() async {
-    // ✅ SKIP all ad loading if user has subscription
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-    } catch (_) {}
-
+  void _initAdd() {
     AdmobHelper.loadInterstitialAd();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
-
-    try {
-      // Double-check subscription after delay
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-
-      final width = MediaQuery.of(context).size.width.toInt();
-
-      final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width - 50, height: 220),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _bannerAd = ad;
-      });
-    } catch (e) {
-      debugPrint("Banner load error: $e");
-
-      setState(() {
-        _bannerAd = null;
-      });
-    }
   }
 
   @override
@@ -127,18 +92,24 @@ class _ExecutionListScreenState extends State<ExecutionListScreen> {
 
           return Column(
             children: [
-              BannerAdView(ad: _bannerAd),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.fetchExecutions,
                   color: AppTheme.primaryColor,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: controller.filteredExecutions.length,
+                    // The 300x250 ad sits right after the first card.
+                    itemCount: controller.filteredExecutions.length + 1,
                     itemBuilder: (context, i) {
+                      if (i == 1 ||
+                          (i == 0 && controller.filteredExecutions.isEmpty)) {
+                        return const MediumRectAd(
+                            padding: EdgeInsets.only(bottom: 12));
+                      }
+                      final index = i > 1 ? i - 1 : i;
                       return _ExecutionCard(
-                        execution: controller.filteredExecutions[i],
-                        index: i,
+                        execution: controller.filteredExecutions[index],
+                        index: index,
                       );
                     },
                   ),
@@ -266,7 +237,9 @@ class _ExecutionCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () => Get.toNamed(AppRoutes.executionDetail, arguments: execution),
+      onTap: () => AdmobHelper.maybeShowInterstitial(
+          then: () =>
+              Get.toNamed(AppRoutes.executionDetail, arguments: execution)),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -387,6 +360,18 @@ class _ExecutionDetailScreenState extends State<ExecutionDetailScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Get.back(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Retry',
+            icon: const Icon(Icons.replay_rounded),
+            onPressed: _retry,
+          ),
+          IconButton(
+            tooltip: 'Delete',
+            icon: const Icon(Icons.delete_outline_rounded),
+            onPressed: _delete,
+          ),
+        ],
       ),
       body: Obx(() {
         final exec = _controller.execution.value ?? _preview;
@@ -413,7 +398,7 @@ class _ExecutionDetailScreenState extends State<ExecutionDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSummaryCard(context, exec),
-              const SizedBox(height: 20),
+              const MediumRectAd(padding: EdgeInsets.symmetric(vertical: 16)),
               _buildDataSection(context, exec),
               const SizedBox(height: 80),
             ],
@@ -421,6 +406,34 @@ class _ExecutionDetailScreenState extends State<ExecutionDetailScreen> {
         );
       }),
     );
+  }
+
+  Future<void> _retry() async {
+    final newId = await runWithProgress(
+        () => Get.find<N8nToolsService>().retryExecution(_preview.id));
+    if (newId == null) return;
+    toolToast('Retry started${newId.isNotEmpty ? ' - execution #$newId' : ''}');
+    if (Get.isRegistered<ExecutionController>()) {
+      Get.find<ExecutionController>().fetchExecutions();
+    }
+  }
+
+  Future<void> _delete() async {
+    if (!await confirmDialog(
+        'Delete execution', 'Delete execution #${_preview.id} and its data?')) {
+      return;
+    }
+    final ok = await runAction(
+        () => Get.find<N8nToolsService>().deleteExecution(_preview.id),
+        success: 'Execution deleted');
+    if (!ok) return;
+    if (Get.isRegistered<ExecutionController>()) {
+      final c = Get.find<ExecutionController>();
+      c.executions.removeWhere((e) => e.id == _preview.id);
+      c.filteredExecutions.removeWhere((e) => e.id == _preview.id);
+    }
+    // Navigator, not Get.back(): Get.back() would close the snackbar first.
+    if (mounted) Navigator.of(context).pop();
   }
 
   Widget _buildSummaryCard(BuildContext context, ExecutionModel exec) {

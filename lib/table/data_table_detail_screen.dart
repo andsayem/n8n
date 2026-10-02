@@ -265,7 +265,8 @@ class _DataTableDetailScreenState extends State<DataTableDetailScreen> {
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+          bottom: MediaQuery.of(context).viewInsets.bottom +
+              MediaQuery.of(context).viewPadding.bottom,
         ),
         child: RowEditorSheet(table: tbl, existing: existing, ctrl: _ctrl),
       ),

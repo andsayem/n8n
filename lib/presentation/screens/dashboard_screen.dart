@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
-import 'package:n8n_manager/core/services/ads_service.dart';
+import 'package:n8n_manager/core/widgets/medium_rect_ad.dart';
 import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 import 'package:n8n_manager/settings/purchase_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,7 +13,6 @@ import '../../core/utils/app_utils.dart';
 import '../../data/models/execution_model.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/dashboard_controller.dart';
-import '../widgets/banner_ad_view.dart';
 import '../widgets/common_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -25,7 +23,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  BannerAd? _bannerAd;
 
   @override
   void initState() {
@@ -36,17 +33,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _handleStartupLogic() async {
     await Future.delayed(const Duration(milliseconds: 300));
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final removed = prefs.getBool('ads_removed') ?? false;
-
-      final ads = Get.find<AdsService>();
-      ads.loadAppOpenAd(
-        adsShow: true,
-        hasSubscription: removed,
-      );
-    } catch (_) {}
 
     // ✅ Delay popup a bit more to ensure UI is fully ready
     await Future.delayed(const Duration(milliseconds: 1200));
@@ -103,42 +89,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _initAdd() async {
-    // ✅ SKIP all ad loading if user has subscription
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-    } catch (_) {}
-
+  void _initAdd() {
     AdmobHelper.loadInterstitialAd();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
-
-    try {
-      // Double-check subscription after delay (may have loaded by now)
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-
-      final width = MediaQuery.of(context).size.width.toInt();
-
-      final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width, height: 100),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _bannerAd = ad;
-      });
-    } catch (e) {
-      debugPrint("Banner load error: $e");
-
-      setState(() {
-        _bannerAd = null;
-      });
-    }
   }
 
   @override
@@ -191,7 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _buildChartSection(context, stats),
                     const SizedBox(height: 8),
                     // ✅ Banner ad (only shows if loaded — skipped when subscribed)
-                    BannerAdView(ad: _bannerAd),
+                    const MediumRectAd(),
                     //const SizedBox(height: 10),
                     _buildStatsGrid(context, stats),
                     const SizedBox(height: 10),
@@ -254,13 +206,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     ];
 
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
+    // Fixed tile height so the value + label never overflow on narrow or
+    // large-font screens.
+    return GridView(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        mainAxisExtent: 132,
+      ),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.4,
       children: cards,
     );
   }

@@ -7,6 +7,7 @@ import 'package:n8n_manager/presentation/controllers/auth_controller.dart';
 import 'package:n8n_manager/presentation/controllers/workflow_controller.dart';
 import '../../data/models/workflow_model.dart';
 import '../../services/n8n_api_service.dart';
+import '../../tools/data/n8n_tools_service.dart';
 
 class WorkflowDetailController extends GetxController {
   final N8nApiService _apiService = Get.find<N8nApiService>();
@@ -157,7 +158,10 @@ class WorkflowDetailController extends GetxController {
         return;
       }
 
-      final result = await _apiService.runWorkflow(workflow.value!.id);
+      // The public API has no run endpoint: trigger the production webhook.
+      final tools = Get.find<N8nToolsService>();
+      final json = await tools.getWorkflowJson(workflow.value!.id);
+      final result = await tools.triggerViaWebhook(json);
 
       _audit.log(
         action: AuditAction.ran,
@@ -165,13 +169,83 @@ class WorkflowDetailController extends GetxController {
         targetName: workflow.value!.name,
       );
 
-      Get.snackbar(
-        'Triggered',
-        'Execution ID: ${result['executionId'] ?? 'Started'}',
-      );
+      Get.snackbar('Triggered', result, snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      Get.snackbar('Cannot run', e.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 5));
     } finally {
       isActing.value = false;
     }
+  }
+
+  N8nToolsService get _tools => Get.find<N8nToolsService>();
+
+  void _refreshList() {
+    if (Get.isRegistered<WorkflowController>()) {
+      Get.find<WorkflowController>().fetchWorkflows();
+    }
+  }
+
+  /// Full workflow JSON, pretty printed (for copy / share).
+  Future<String> exportJson() async {
+    final json = await _tools.getWorkflowJson(workflow.value!.id);
+    return N8nToolsService.prettyJson(json);
+  }
+
+  Future<void> duplicate(String newName) async {
+    final wf = workflow.value;
+    if (wf == null) return;
+    final id = await _tools.duplicateWorkflow(wf.id, newName);
+    _audit.log(
+      action: AuditAction.created,
+      targetType: AuditTarget.workflow,
+      targetName: newName,
+      targetId: id,
+      detail: 'Duplicated from ${wf.name}',
+    );
+    _refreshList();
+  }
+
+  Future<void> delete() async {
+    final wf = workflow.value;
+    if (wf == null) return;
+    await _tools.deleteWorkflow(wf.id);
+    _audit.log(
+      action: AuditAction.deleted,
+      targetType: AuditTarget.workflow,
+      targetName: wf.name,
+      targetId: wf.id,
+    );
+    _refreshList();
+  }
+
+  Future<void> setTags(List<String> tagIds, List<String> tagNames) async {
+    final wf = workflow.value;
+    if (wf == null) return;
+    await _tools.setWorkflowTags(wf.id, tagIds);
+    workflow.value = WorkflowModel(
+      id: wf.id,
+      name: wf.name,
+      active: wf.active,
+      createdAt: wf.createdAt,
+      updatedAt: wf.updatedAt,
+      tags: tagNames,
+      nodes: wf.nodes,
+      connections: wf.connections,
+      settings: wf.settings,
+      description: wf.description,
+      parentFolderId: wf.parentFolderId,
+      lastExecutionStatus: wf.lastExecutionStatus,
+      lastExecutionAt: wf.lastExecutionAt,
+    );
+    _audit.log(
+      action: AuditAction.updated,
+      targetType: AuditTarget.workflow,
+      targetName: wf.name,
+      detail: 'Tags: ${tagNames.isEmpty ? 'none' : tagNames.join(', ')}',
+    );
+    _refreshList();
   }
 
   Future<void> moveToFolder(String? folderId, N8nFolder? folder) async {

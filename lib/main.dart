@@ -11,6 +11,7 @@ import 'presentation/controllers/theme_controller.dart';
 import 'presentation/routes/app_pages.dart';
 import 'services/instance_service.dart';
 import 'services/n8n_api_service.dart';
+import 'tools/data/n8n_tools_service.dart';
 import 'core/services/purchase_service.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:upgrader/upgrader.dart';
@@ -37,6 +38,7 @@ void main() async {
   await Get.putAsync<InstanceService>(() => InstanceService().init());
   await Get.putAsync<AuditLogService>(() => AuditLogService().init());
   Get.put<N8nApiService>(N8nApiService());
+  Get.put<N8nToolsService>(N8nToolsService());
 
   // Init controllers
   Get.put<AuthController>(AuthController());

@@ -58,6 +58,7 @@ class N8nApiService extends GetxService {
     ));
 
     _dio = dio;
+    _nameCacheAt = null;
   }
 
   Future<List<WorkflowModel>> getWorkflows({
@@ -156,12 +157,49 @@ class N8nApiService extends GetxService {
         list = data;
       }
 
+      final names = await _workflowNames();
       return list
-          .map((e) => ExecutionModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => ExecutionModel.fromJson(
+              _withWorkflowName(e as Map<String, dynamic>, names)))
           .toList();
     } on DioException catch (e) {
       throw _handleError(e);
     }
+  }
+
+  // Executions only carry a workflowId, so names come from a short-lived
+  // id -> name cache of the workflow list.
+  Map<String, String> _nameCache = {};
+  DateTime? _nameCacheAt;
+
+  Future<Map<String, String>> _workflowNames() async {
+    final at = _nameCacheAt;
+    if (at != null && DateTime.now().difference(at).inSeconds < 60) {
+      return _nameCache;
+    }
+    try {
+      final res = await dio.get(AppConstants.workflowsEndpoint,
+          queryParameters: {'limit': 250});
+      final data = res.data;
+      final list = data is Map ? data['data'] : data;
+      if (list is List) {
+        _nameCache = {
+          for (final w in list.whereType<Map>())
+            w['id'].toString(): (w['name'] ?? '').toString(),
+        };
+        _nameCacheAt = DateTime.now();
+      }
+    } catch (_) {}
+    return _nameCache;
+  }
+
+  Map<String, dynamic> _withWorkflowName(
+      Map<String, dynamic> json, Map<String, String> names) {
+    if (json['workflowName'] != null || json['workflowData'] is Map) {
+      return json;
+    }
+    final name = names[json['workflowId']?.toString()];
+    return name == null ? json : {...json, 'workflowName': name};
   }
 
   Future<ExecutionModel> getExecution(String id) async {
@@ -170,7 +208,8 @@ class N8nApiService extends GetxService {
         '${AppConstants.executionsEndpoint}/$id',
         queryParameters: {'includeData': true},
       );
-      return ExecutionModel.fromJson(response.data as Map<String, dynamic>);
+      return ExecutionModel.fromJson(_withWorkflowName(
+          response.data as Map<String, dynamic>, await _workflowNames()));
     } on DioException catch (e) {
       throw _handleError(e);
     }

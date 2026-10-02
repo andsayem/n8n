@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/common/admob_helper.dart';
-import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
-import 'package:n8n_manager/presentation/widgets/banner_ad_view.dart';
+import 'package:n8n_manager/core/widgets/medium_rect_ad.dart';
 import '../controllers/credential_controller.dart';
 import '../../../data/models/n8n_credential_model.dart';
 import 'credential_create_screen.dart';
@@ -17,7 +15,6 @@ class CredentialListScreen extends StatefulWidget {
 }
 
 class _CredentialListScreenState extends State<CredentialListScreen> {
-  BannerAd? _bannerAd;
 
   static const _black = Color(0xFF18181B);
   static const _zinc500 = Color(0xFF71717A);
@@ -32,45 +29,12 @@ class _CredentialListScreenState extends State<CredentialListScreen> {
     _initAdd();
   }
 
-  Future<void> _initAdd() async {
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-    } catch (_) {}
-
+  void _initAdd() {
     AdmobHelper.loadInterstitialAd();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (!mounted) return;
-
-    try {
-      final purchaseCtrl = Get.find<PurchaseController>();
-      if (purchaseCtrl.adsRemoved.value) return;
-
-      final width = MediaQuery.of(context).size.width.toInt();
-
-      final ad = await AdmobHelper.loadBannerAd(
-        size: AdSize(width: width - 50, height: 220),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _bannerAd = ad;
-      });
-    } catch (e) {
-      debugPrint("Banner load error: $e");
-
-      setState(() {
-        _bannerAd = null;
-      });
-    }
   }
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -110,7 +74,6 @@ class _CredentialListScreenState extends State<CredentialListScreen> {
       ),
       body: Column(
         children: [
-          BannerAdView(ad: _bannerAd),
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
@@ -129,9 +92,14 @@ class _CredentialListScreenState extends State<CredentialListScreen> {
                 onRefresh: controller.loadCredentials,
                 child: ListView.separated(
                   padding: const EdgeInsets.all(20),
-                  itemCount: controller.credentials.length,
+                  // The 300x250 ad sits right after the first card.
+                  itemCount: controller.credentials.length + 1,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
+                  itemBuilder: (context, i) {
+                    if (i == 1) {
+                      return const MediumRectAd(padding: EdgeInsets.zero);
+                    }
+                    final index = i > 1 ? i - 1 : i;
                     final cred = controller.credentials[index];
                     return _CredentialCard(
                       credential: cred,
