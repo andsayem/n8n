@@ -7,7 +7,7 @@ class AdsConfig {
 
   /// Real AdMob Banner Ad Unit ID (replace with your real ID for production).
   static const String realBannerAdUnitId =
-      'ca-app-pub-1195883693665145/9026463491'; // Google test ID
+      'ca-app-pub-1195883693665145/9026463491'; // Real AdMob unit
 
   /// Test AdMob Banner Ad Unit ID (Google official test ID).
   static const String testBannerAdUnitId =
@@ -16,7 +16,7 @@ class AdsConfig {
   // appOpenAdUnitId
   /// Real AdMob App Open Ad Unit ID (replace with your real ID for production).
   static const String realAppOpenAdUnitId =
-      'ca-app-pub-1195883693665145/4291568600'; // Google test ID
+      'ca-app-pub-1195883693665145/4291568600'; // Real AdMob unit
   /// Test AdMob App Open Ad Unit ID (Google official test ID).
   static const String testAppOpenAdUnitId =
       'ca-app-pub-3940256099942544/9257395921';
@@ -24,7 +24,7 @@ class AdsConfig {
   // interstitialAdUnitId
   /// Real AdMob Interstitial Ad Unit ID (replace with your real ID for production).
   static const String realInterstitialAdUnitId =
-      'ca-app-pub-1195883693665145/5604650274'; // Google test ID
+      'ca-app-pub-1195883693665145/5604650274'; // Real AdMob unit
   /// Test AdMob Interstitial Ad Unit ID (Google official test ID).
   static const String testInterstitialAdUnitId =
       'ca-app-pub-3940256099942544/1033173712';
@@ -32,7 +32,7 @@ class AdsConfig {
   // nativeAdUnitId
   /// Real AdMob Native Advanced Ad Unit ID (replace with your real ID for production).
   static const String realNativeAdUnitId =
-      'ca-app-pub-1195883693665145/2171400201'; // Google test ID
+      'ca-app-pub-1195883693665145/2171400201'; // Real AdMob unit
   /// Test AdMob Native Advanced Ad Unit ID (Google official test ID).
   static const String testNativeAdUnitId =
       'ca-app-pub-3940256099942544/2247696110';
