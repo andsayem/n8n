@@ -43,7 +43,7 @@ class AdMobConfig {
   // Interstitial
   // ---------------------------------------------------------------------
   static const String androidInterstitialId =
-      'ca-app-pub-1195883693665145/56046502743';
+      'ca-app-pub-1195883693665145/5604650274';
   static const String? iosInterstitialId = null;
 
   // ---------------------------------------------------------------------

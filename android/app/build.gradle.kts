@@ -55,4 +55,8 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // AdMob (play-services-ads) pulls in androidx.work 2.7.0, whose WorkDatabase
+    // crashes on 16 KB page-size devices (Android 15+/16). Override with a
+    // 16 KB-compatible WorkManager release.
+    implementation("androidx.work:work-runtime:2.11.2")
 }
