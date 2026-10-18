@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:n8n_manager/ads_config.dart';
+import 'package:n8n_manager/core/constants/app_constants.dart';
+import 'package:n8n_manager/core/services/ads_service.dart';
+import 'package:n8n_manager/presentation/controllers/auth_controller.dart';
 import 'package:n8n_manager/presentation/controllers/purchase_controller.dart';
 
 class AdmobHelper with WidgetsBindingObserver {
@@ -66,7 +69,10 @@ class AdmobHelper with WidgetsBindingObserver {
     if (_isInterstitialLoading || _interstitialAd != null) return;
 
     _isInterstitialLoading = true;
+    unawaited(AdsService.ready.then((_) => _requestInterstitial()));
+  }
 
+  static void _requestInterstitial() {
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -205,6 +211,7 @@ class AdmobHelper with WidgetsBindingObserver {
 
   static Future<BannerAd?> loadAdaptiveBanner(BuildContext context) async {
     final width = MediaQuery.of(context).size.width.toInt();
+    await AdsService.ready;
 
     final AnchoredAdaptiveBannerAdSize? size =
         await AdSize.getLargeAnchoredAdaptiveBannerAdSize(width);
@@ -234,6 +241,8 @@ class AdmobHelper with WidgetsBindingObserver {
     String? adUnitId,
     AdSize size = const AdSize(width: 320, height: 50),
   }) async {
+    if (adsRemoved) return null;
+    await AdsService.ready;
     if (adsRemoved) return null;
     final completer = Completer<BannerAd?>();
     final banner = BannerAd(
@@ -303,7 +312,9 @@ class AdmobHelper with WidgetsBindingObserver {
   static bool _isShowingAppOpen = false;
   static const Duration maxCacheDuration = Duration(hours: 4);
 
-  void loadAppOpenAd({Function()? onLoaded}) {
+  Future<void> loadAppOpenAd({Function()? onLoaded}) async {
+    await AdsService.ready;
+    if (adsRemoved) return;
     AppOpenAd.load(
       adUnitId: appOpenAdUnitId,
       request: const AdRequest(),
@@ -318,8 +329,22 @@ class AdmobHelper with WidgetsBindingObserver {
     );
   }
 
+  /// App Open ads only once the user is connected and inside the app. On the
+  /// splash or connect screen it used to pop up while the server URL / API
+  /// key was being typed, and closing it wiped both fields.
+  static bool get _appOpenAllowed {
+    final route = Get.currentRoute;
+    if (route == AppRoutes.splash || route == AppRoutes.login) return false;
+    try {
+      return Get.find<AuthController>().activeInstance.value != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static void showAppOpenAd() {
     if (suppressAppOpen || _appOpenAd == null || _isShowingAppOpen) return;
+    if (!_appOpenAllowed) return;
 
     if (_appOpenLoadTime != null &&
         DateTime.now().subtract(maxCacheDuration).isAfter(_appOpenLoadTime!)) {

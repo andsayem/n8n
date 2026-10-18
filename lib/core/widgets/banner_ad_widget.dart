@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers.dart';
+import '../services/ads_service.dart';
 
 /// Reusable Banner Ad widget that uses the shared AdsService.
 /// It manages the BannerAd lifecycle and displays a small area when loaded.
@@ -89,6 +90,8 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
         ),
       );
       // Call load; AdWidget will only be inserted after onAdLoaded sets _bannerAd and _loaded.
+      await AdsService.ready;
+      if (!mounted) { created.dispose(); return; }
       await created.load();
     } catch (_) {
       // don't crash app if ads fail

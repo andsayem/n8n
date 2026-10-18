@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
 import '../../core/constants/app_constants.dart';
 import '../../data/models/workflow_model.dart';
@@ -45,11 +46,17 @@ class N8nApiService extends GetxService {
       },
     ));
 
-    dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      error: true,
-    ));
+    // Debug builds only, and never the headers: they carry the n8n API key,
+    // which release builds used to print to the device log (logcat), where
+    // any app with log access or a USB connection could read it.
+    if (kDebugMode) {
+      dio.interceptors.add(LogInterceptor(
+        requestHeader: false,
+        requestBody: true,
+        responseBody: true,
+        error: true,
+      ));
+    }
 
     dio.interceptors.add(InterceptorsWrapper(
       onError: (DioException e, ErrorInterceptorHandler handler) {

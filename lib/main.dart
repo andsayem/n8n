@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -48,8 +50,29 @@ void main() async {
   // lifecycle observer
   WidgetsBinding.instance.addObserver(adHelper);
 
-  adHelper.loadAppOpenAd(
+  // Register AdsService with GetX (fixes Get.find<AdsService>() in dashboard)
+  final adsService = Get.put<AdsService>(AdsService(), permanent: true);
+
+  // Initialize PurchaseService in the background (non-blocking)
+  final purchaseService = PurchaseService();
+  // start initialization but do not await so UI can appear quickly
+  purchaseService.initialize();
+  runApp(const N8nManagerApp());
+
+  // Consent (UMP) and SDK setup run after the first frame so the app never
+  // waits on the network to open. Every ad request awaits AdsService.ready,
+  // so nothing is requested before the user has answered the consent form.
+  unawaited(adsService.initialize());
+  final launchedAt = DateTime.now();
+  unawaited(adHelper.loadAppOpenAd(
     onLoaded: () {
+      // An App Open ad belongs to the moment the app opens. If consent and
+      // the ad request took longer than that, keep the ad for the next
+      // resume instead of popping it up in the middle of whatever the user
+      // is doing by now (AdMob App Open policy).
+      if (DateTime.now().difference(launchedAt) > const Duration(seconds: 8)) {
+        return;
+      }
       Future.delayed(const Duration(seconds: 2), () {
         final controller = Get.find<PurchaseController>();
 
@@ -59,17 +82,7 @@ void main() async {
         }
       });
     },
-  );
-
-  // Register AdsService with GetX (fixes Get.find<AdsService>() in dashboard)
-  final adsService = Get.put<AdsService>(AdsService(), permanent: true);
-  await adsService.initialize();
-
-  // Initialize PurchaseService in the background (non-blocking)
-  final purchaseService = PurchaseService();
-  // start initialization but do not await so UI can appear quickly
-  purchaseService.initialize();
-  runApp(const N8nManagerApp());
+  ));
 }
 
 class N8nManagerApp extends StatelessWidget {

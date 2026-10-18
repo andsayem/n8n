@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers.dart';
+import '../services/ads_service.dart';
 
 /// Adaptive Banner Ad widget for Dashboard.
 /// Automatically computes optimal size based on device width and orientation.
@@ -81,6 +82,8 @@ class _AdaptiveBannerState extends ConsumerState<AdaptiveBanner> {
         ),
       );
 
+      await AdsService.ready;
+      if (!mounted) { created.dispose(); return; }
       await created.load();
     } catch (e) {
       debugPrint('AdaptiveBanner error: $e');

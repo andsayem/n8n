@@ -10,6 +10,7 @@ import 'package:n8n_manager/tag/modules/tags/views/tag_list_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/services/ads_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../tools/screens/deploy_guide_screen.dart';
 import '../../tools/screens/projects_screen.dart';
@@ -33,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
   String _buildNumber = '';
+  bool _privacyOptionsRequired = false;
   final authController = Get.find<AuthController>();
 
   @override
@@ -40,6 +42,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _loadPackageInfo();
     _initAdd();
+    _loadPrivacyOptions();
+  }
+
+  /// Ad consent can be changed later only where the law requires it
+  /// (EEA/UK/Switzerland), so the row is shown just for those users.
+  Future<void> _loadPrivacyOptions() async {
+    await AdsService.ready;
+    final required = await AdsService.privacyOptionsRequired;
+    if (mounted && required) setState(() => _privacyOptionsRequired = true);
   }
 
   void _initAdd() {
@@ -259,6 +270,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: AppTheme.successColor,
                     onTap: _contactSupport,
                   ),
+                  if (_privacyOptionsRequired) ...[
+                    _TileDivider(),
+                    const _ActionTile(
+                      title: 'Privacy Options',
+                      subtitle: 'Change your ad consent choices',
+                      icon: Icons.privacy_tip_outlined,
+                      iconColor: AppTheme.accentColor,
+                      onTap: AdsService.showPrivacyOptions,
+                    ),
+                  ],
                 ]),
                 const SizedBox(height: 20),
 

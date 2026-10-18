@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/material.dart';
 import '../../ads_config.dart';
@@ -5,24 +7,78 @@ import '../../ads_config.dart';
 /// Lightweight AdsService to initialize the Google Mobile Ads SDK,
 /// expose a simple AppOpenAd loader/show, and provide BannerAd creation.
 class AdsService {
-  bool _initialized = false;
   AppOpenAd? _appOpenAd;
   bool _appOpenAdLoading = false;
   InterstitialAd? _interstitialAd;
   bool _interstitialLoading = false;
 
-  Future<void> initialize() async {
-    if (_initialized) return;
-    // When debugging, configure test device ids to increase chance of test fills
+  static final Completer<void> _ready = Completer<void>();
+
+  /// Completes once consent has been gathered and the SDK is initialized.
+  /// Every ad request in the app awaits this, so no ad is ever requested
+  /// before the user has answered the consent form (EEA/UK/Switzerland).
+  static Future<void> get ready => _ready.future;
+
+  static Future<void>? _initFuture;
+
+  /// Gathers UMP consent, then initializes the SDK. Safe to call more than
+  /// once; never throws, and always completes [ready] so ad loads can't hang.
+  Future<void> initialize() => _initFuture ??= _initialize();
+
+  Future<void> _initialize() async {
     try {
+      // When debugging, configure test device ids to increase chance of test fills
       if (adsConfig.debug) {
-        await MobileAds.instance.updateRequestConfiguration(RequestConfiguration(testDeviceIds: ['EMULATOR']));
+        await MobileAds.instance.updateRequestConfiguration(
+            RequestConfiguration(testDeviceIds: ['EMULATOR']));
       }
-    } catch (_) {}
-    await MobileAds.instance.initialize();
-    _initialized = true;
-    // Optionally pre-load an app open ad.
-    // loadAppOpenAd();
+      await _gatherConsent();
+      await MobileAds.instance.initialize();
+    } catch (e) {
+      debugPrint('Ads initialization failed: $e');
+    } finally {
+      if (!_ready.isCompleted) _ready.complete();
+    }
+  }
+
+  /// Google UMP consent. Shows the consent form only where it is required
+  /// (EEA/UK/Switzerland) and is a no-op elsewhere. A failure or a slow
+  /// network never blocks ads: whatever consent status exists is used.
+  static Future<void> _gatherConsent() async {
+    final done = Completer<void>();
+    ConsentInformation.instance.requestConsentInfoUpdate(
+      ConsentRequestParameters(),
+      () async {
+        try {
+          await ConsentForm.loadAndShowConsentFormIfRequired((error) {
+            if (error != null) {
+              debugPrint('Consent form error: ${error.message}');
+            }
+            if (!done.isCompleted) done.complete();
+          });
+        } catch (e) {
+          debugPrint('Consent form failed: $e');
+          if (!done.isCompleted) done.complete();
+        }
+      },
+      (error) {
+        debugPrint('Consent info update failed: ${error.message}');
+        if (!done.isCompleted) done.complete();
+      },
+    );
+    await done.future.timeout(const Duration(seconds: 15), onTimeout: () {});
+  }
+
+  /// Whether the user must be offered a way to change their consent later
+  /// (Settings > Privacy options). True only in regions that need it.
+  static Future<bool> get privacyOptionsRequired async =>
+      await ConsentInformation.instance.getPrivacyOptionsRequirementStatus() ==
+      PrivacyOptionsRequirementStatus.required;
+
+  static void showPrivacyOptions() {
+    ConsentForm.showPrivacyOptionsForm((error) {
+      if (error != null) debugPrint('Privacy options error: ${error.message}');
+    });
   }
 
   String get _appOpenUnitId => adsConfig.effectiveAppOpenAdUnitId;
@@ -37,7 +93,7 @@ class AdsService {
     if (hasSubscription) return;
     
     // print('AdsService: loadAppOpenAd called, adsShow=$adsShow');
-    if (!_initialized) return;
+    await ready;
     if (_appOpenAd != null || _appOpenAdLoading) return;
     _appOpenAdLoading = true;
     try {
@@ -85,7 +141,7 @@ class AdsService {
 
   /// Load an interstitial ad and optionally show it when ready.
   Future<void> loadInterstitial({bool adsShow = false}) async {
-    if (!_initialized) return;
+    await ready;
     if (_interstitialAd != null || _interstitialLoading) return;
     _interstitialLoading = true;
     try {
@@ -171,7 +227,7 @@ class AdsService {
   Future<NativeAd?> loadNativeAd({
     required NativeAdListener listener,
   }) async {
-    if (!_initialized) return null;
+    await ready;
     try {
       final nativeAd = NativeAd(
         adUnitId: _nativeUnitId,
