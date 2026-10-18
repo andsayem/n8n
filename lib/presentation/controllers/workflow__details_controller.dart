@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:n8n_manager/audit/data/models/audit_entry.dart';
 import 'package:n8n_manager/audit/data/services/audit_log_service.dart';
+import 'package:n8n_manager/core/services/review_service.dart';
 import 'package:n8n_manager/data/mock_data.dart';
 import 'package:n8n_manager/folders/data/models/n8n_folder_model.dart';
 import 'package:n8n_manager/presentation/controllers/auth_controller.dart';
@@ -85,6 +86,7 @@ class WorkflowDetailController extends GetxController {
         'Workflow activated',
         snackPosition: SnackPosition.BOTTOM,
       );
+      ReviewService.recordSuccess();
     } finally {
       isActing.value = false;
     }
@@ -130,6 +132,7 @@ class WorkflowDetailController extends GetxController {
         'Workflow deactivated',
         snackPosition: SnackPosition.BOTTOM,
       );
+      ReviewService.recordSuccess();
     } finally {
       isActing.value = false;
     }
@@ -170,6 +173,7 @@ class WorkflowDetailController extends GetxController {
       );
 
       Get.snackbar('Triggered', result, snackPosition: SnackPosition.BOTTOM);
+      ReviewService.recordSuccess();
     } catch (e) {
       Get.snackbar('Cannot run', e.toString().replaceFirst('Exception: ', ''),
           snackPosition: SnackPosition.BOTTOM,
